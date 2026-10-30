@@ -1,6 +1,6 @@
 {
   "name": "@lulu38m/spider-crawler",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A literal web crawler: drop a document, watch a spider read it, get the gist.",
   "keywords": [
     "spider",
