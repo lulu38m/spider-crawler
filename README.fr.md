@@ -28,6 +28,7 @@ C'est un jouet, mais honnête : tout ce que fait l'araignée à l'écran est la 
 - 🕷️ **Animation procédurale, zéro keyframe** : cinématique inverse à deux segments pour chacune des huit pattes, démarche tétrapode (quatre pattes levées, puis les quatre autres), sauts entre les pages, fil de sécurité. L'araignée est dessinée comme son propre squelette.
 - 📄 **Lit de vrais fichiers** : PDF (rendu fidèle via pdf.js), Word (.docx), Markdown, HTML, texte et plus de 40 langages de programmation.
 - 🔗 **Lit aussi les liens** : articles, PDF en ligne, README GitHub, pages Wikipédia.
+- 📈 **Lit les rapports financiers** : communiqués de résultats, rapports annuels, notes d'analyste. L'araignée attrape les chiffres clés (chiffre d'affaires, résultat net, marges, BPA…) avec leur variation et leur période.
 - 🔒 **Privé par défaut** : les fichiers sont lus dans ton navigateur. Pas d'envoi, pas de compte, pas de clé API.
 - ✨ **Résumé IA optionnel** avec ta propre clé : Claude ou toute API compatible OpenAI (OpenAI, Ollama, LM Studio, OpenRouter…).
 - 🎬 **Pensé pour la vidéo** : enregistreur intégré en 1920×1080, **1080×1920 pour TikTok, Reels et Shorts**, ou 1080×1080.
@@ -65,6 +66,12 @@ Colle un lien dans le champ de l'écran d'accueil, n'importe où sur la page, gl
 Les navigateurs n'autorisent une page à lire un autre site que si ce site l'accepte (CORS). La version en ligne lit donc ce qui lui est ouvert : fichiers et README GitHub, articles Wikipédia (via leurs API publiques), et les nombreux sites et PDF qui l'autorisent. Sinon, elle le dit clairement.
 
 Les versions `npx`, Docker et zip embarquent un petit récupérateur local qui lit **n'importe quelle page publique**. Il ne sort que vers l'internet public (pas de `localhost` ni d'adresses du réseau local, vérifié à chaque redirection), s'arrête à 20 Mo et 15 secondes, et ne garde rien. Pour lire ton intranet, lance-le avec `--allow-private`.
+
+## Rapports financiers
+
+Quand un document ressemble à un rapport financier, l'araignée passe en mode finance : elle repère les **chiffres clés** tels que le document les écrit (chiffre d'affaires, résultat net, résultat opérationnel, EBITDA, marges, BPA, free cash-flow, dette nette, dividende, objectif de cours…), avec leur **variation** (`+7,2%`, `−4%`, `+70 bps`) et leur **période** (`Q3 2026`, `H1 2026`, `FY 2025`). Elle les attrape comme des mots-clés (`CA €1 234,5m +7,2%` sur la toile), et le résumé affiche un tableau **Key figures**, aussi présent dans l'export Markdown.
+
+Rien n'est calculé ni deviné : un chiffre n'apparaît que si le document le donne, et l'app ne donne ni avis ni conseil. Pour essayer : le rapport de résultats d'Orbweaver Silkworks, une entreprise qui n'existe pas.
 
 ## Utiliser
 

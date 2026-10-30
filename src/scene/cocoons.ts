@@ -11,6 +11,8 @@ export type CocoonState = 'wrapping' | 'flying' | 'hanging';
 
 export interface Cocoon {
   label: string;
+  /** A figure's change ("+18%"), drawn in green or pink after the label. */
+  badge?: string;
   keyword: number;
   state: CocoonState;
   /** Scene time the state started. */
@@ -45,9 +47,10 @@ export class Cocoons {
     this.items = [];
   }
 
-  spawn(label: string, keyword: number, origin: Vec2, now: number): void {
+  spawn(label: string, keyword: number, origin: Vec2, now: number, badge?: string): void {
     this.items.push({
       label,
+      badge,
       keyword,
       state: 'wrapping',
       since: now,
@@ -62,10 +65,10 @@ export class Cocoons {
   }
 
   /** Put cocoons straight into the web (skip button). */
-  spawnHanging(label: string, keyword: number, now: number, slots: SlotProvider): void {
+  spawnHanging(label: string, keyword: number, now: number, slots: SlotProvider, badge?: string): void {
     const slot = this.items.length;
     const p = slots.slot(slot);
-    this.items.push({ label, keyword, state: 'hanging', since: now, origin: p, from: p, pos: { ...p }, slot, angle: 0.3, angVel: 0, big: 0 });
+    this.items.push({ label, badge, keyword, state: 'hanging', since: now, origin: p, from: p, pos: { ...p }, slot, angle: 0.3, angVel: 0, big: 0 });
   }
 
   update(dt: number, now: number, toScreen: (p: Vec2) => Vec2, slots: SlotProvider): void {
@@ -142,9 +145,9 @@ export class Cocoons {
         ctx.lineTo(tip.x, tip.y);
         ctx.stroke();
         ctx.restore();
-        drawCocoon(ctx, c.label, tip, c.angle * 0.6, u, alpha, true);
+        drawCocoon(ctx, c.label, tip, c.angle * 0.6, u, alpha, true, c.badge);
       } else {
-        drawCocoon(ctx, c.label, c.pos, c.angle, u, alpha, false);
+        drawCocoon(ctx, c.label, c.pos, c.angle, u, alpha, false, c.badge);
       }
     }
   }
@@ -152,14 +155,27 @@ export class Cocoons {
 
 const widthCache = new Map<string, number>();
 
-export function drawCocoon(ctx: CanvasRenderingContext2D, label: string, top: Vec2, angle: number, u: number, alpha: number, hanging: boolean): void {
+export function drawCocoon(ctx: CanvasRenderingContext2D, label: string, top: Vec2, angle: number, u: number, alpha: number, hanging: boolean, badge?: string): void {
   const font = `600 ${12 * u}px ${UI_FONT}`;
+  const badgeFont = `700 ${11.5 * u}px ${UI_FONT}`;
   ctx.save();
   ctx.font = font;
   const key = `${label}@${u.toFixed(2)}`;
   let tw = widthCache.get(key);
   if (tw === undefined) widthCache.set(key, (tw = ctx.measureText(label).width));
-  const w = tw + 20 * u;
+  let bw = 0;
+  if (badge) {
+    const bkey = `badge:${badge}@${u.toFixed(2)}`;
+    const cached = widthCache.get(bkey);
+    if (cached === undefined) {
+      ctx.font = badgeFont;
+      bw = ctx.measureText(badge).width;
+      widthCache.set(bkey, bw);
+      ctx.font = font;
+    } else bw = cached;
+  }
+  const gap = badge ? 6 * u : 0;
+  const w = tw + gap + bw + 20 * u;
   const h = 22 * u;
   ctx.translate(top.x, top.y);
   ctx.rotate(angle);
@@ -190,8 +206,18 @@ export function drawCocoon(ctx: CanvasRenderingContext2D, label: string, top: Ve
   ctx.stroke();
   ctx.restore();
   ctx.fillStyle = '#23253a';
-  ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(label, 0, y0 + h / 2 + 0.5 * u);
+  if (!badge) {
+    ctx.textAlign = 'center';
+    ctx.fillText(label, 0, y0 + h / 2 + 0.5 * u);
+  } else {
+    // Label, then the change in green (up) or pink (down).
+    ctx.textAlign = 'left';
+    const x0 = -(tw + gap + bw) / 2;
+    ctx.fillText(label, x0, y0 + h / 2 + 0.5 * u);
+    ctx.font = badgeFont;
+    ctx.fillStyle = badge.startsWith('−') || badge.startsWith('-') ? '#d6336c' : '#1f9d55';
+    ctx.fillText(badge, x0 + tw + gap, y0 + h / 2 + 0.5 * u);
+  }
   ctx.restore();
 }

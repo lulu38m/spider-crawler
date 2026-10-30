@@ -51,6 +51,10 @@ It appears in the picker right away. New body shapes, joints or eyes go in [`src
 
 Summaries detect the document's language from its stopwords. Adding a language means adding a stopword list (and optionally a few generic words) in [`src/summarize/stopwords.ts`](src/summarize/stopwords.ts), plus the words that make a sentence lean on context in `DANGLING_STARTS` in [`src/summarize/index.ts`](src/summarize/index.ts). Add a short test in `tests/summarize.test.ts` with a paragraph in your language.
 
+### Financial metrics
+
+Finance mode lives in [`src/summarize/finance.ts`](src/summarize/finance.ts). Each metric is a few lines in `METRICS`: its names in each language, its unit (money, percent, per share, multiple) and its rank. A metric your reports use is missing, or its name in your language? Add it, with a sentence from a (public or made-up) report in `tests/finance.test.ts`.
+
 ### A file format
 
 Every format is converted to blocks (headings, paragraphs, list items, code) and typeset by [`src/doc/layout.ts`](src/doc/layout.ts), or, for fixed layouts like PDF, to positioned words directly. See [`src/doc/load.ts`](src/doc/load.ts) for how formats are detected. EPUB and OpenDocument are wanted.

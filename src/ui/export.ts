@@ -2,6 +2,7 @@ import { REPO_URL } from '../config';
 import { Camera } from '../scene/camera';
 import { drawBackdrop } from '../scene/background';
 import { drawCocoon } from '../scene/cocoons';
+import { catchTargets } from '../scene/director';
 import { drawLogo, drawMiniSpider } from '../scene/hud';
 import { PALETTE, UI_FONT } from '../scene/palette';
 import { drawOrbWeb, makeOrbWeb, WEB_DONE } from '../scene/web';
@@ -38,10 +39,15 @@ export function summaryMarkdown(name: string, s: Summary, source?: string): stri
   if (s.ai) {
     out.push(`**TL;DR** (${s.ai.provider}, ${s.ai.model}): ${s.ai.tldr}`, '');
     if (s.ai.points.length) out.push(...s.ai.points.map((p) => `- ${p}`), '');
-    out.push('## Key sentences, as written in the document', '');
   } else {
-    out.push(`**TL;DR:** ${s.tldr}`, '', '## Key sentences', '');
+    out.push(`**TL;DR:** ${s.tldr}`, '');
   }
+  if (s.figures?.length) {
+    out.push('## Key figures', '', '| | Value | Change | Period |', '| --- | --- | --- | --- |');
+    for (const f of s.figures) out.push(`| ${f.label} | ${f.value} | ${f.change ?? ''} | ${f.period ?? ''} |`);
+    out.push('', '_As stated in the document. Not financial advice._', '');
+  }
+  out.push(s.ai ? '## Key sentences, as written in the document' : '## Key sentences', '');
   if (s.mode === 'code') out.push(...s.points.map((p) => `- \`${p.label ?? ''}\`: \`${p.text.trim()}\``));
   else out.push(...s.points.map((p) => `- ${p.text}`));
   if (s.keywords.length) out.push('', '## Keywords', '', s.keywords.map((k) => `\`${k.phrase}\``).join(', '));
@@ -82,14 +88,16 @@ export async function shareCard(name: string, s: Summary, tldr: string): Promise
 
   const web = makeOrbWeb({ x: 250, y: 330 }, 190, { radials: 26, frameSides: 6, spacing: 190 / 14, mooringLength: 900, seed: 3, slots: 8 });
   drawOrbWeb(ctx, web, WEB_DONE, { rgb: PALETTE.silkRgb, alpha: 0.9, width: 1.2, time: 1.3, glint: false });
-  s.keywords.slice(0, 8).forEach((k, i) => {
+  // Figures first: in a report they are the point.
+  const targets = catchTargets(s).sort((a, b) => Number(b.figure) - Number(a.figure));
+  targets.slice(0, 8).forEach((k, i) => {
     const p = web.slots[i];
     ctx.strokeStyle = 'rgba(232, 236, 247, 0.7)';
     ctx.beginPath();
     ctx.moveTo(p.x, p.y - 10);
     ctx.lineTo(p.x, p.y);
     ctx.stroke();
-    drawCocoon(ctx, k.phrase, p, (i % 3 - 1) * 0.08, 1.05, 1, true);
+    drawCocoon(ctx, k.label, p, (i % 3 - 1) * 0.08, 1.05, 1, true, k.badge);
   });
   drawMiniSpider(ctx, { x: 250, y: 330 }, 9, 0.4);
 

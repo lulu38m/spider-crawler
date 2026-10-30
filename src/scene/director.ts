@@ -2,7 +2,7 @@ import { add, clamp, dist, norm, scale, sub, type Rect, type Vec2 } from '../cor
 import type { Doc, Line, Page, Word } from '../doc/types';
 import type { Spider } from '../spider/spider';
 import type { Summary } from '../summarize/types';
-import type { CatchMark, HighlightSeg } from './state';
+import type { CatchMark, CatchTarget, HighlightSeg } from './state';
 
 /**
  * The director turns a document + summary into choreography: which lines the spider walks
@@ -55,6 +55,8 @@ export interface DirectorOptions {
 
 export class Director {
   highlights: HighlightSeg[] = [];
+  /** Keywords, then figures (financial reports). Catch marks point into this list. */
+  targets: CatchTarget[] = [];
   catches: CatchMark[] = [];
   carrot: Vec2 = { x: 0, y: 0 };
   page = 0;
@@ -89,6 +91,7 @@ export class Director {
     }
     this.wordStarts.sort((a, b) => a - b);
     this.buildHighlights();
+    this.targets = catchTargets(summary);
     this.buildCatches();
     this.plan();
   }
@@ -152,17 +155,21 @@ export class Director {
     });
   }
 
-  /** One occurrence per keyword, spread evenly over the document so catches happen all along. */
+  /**
+   * One occurrence per keyword, spread evenly over the document so catches happen all along.
+   * Figures have a single occurrence (where the report states them) and get their spot first.
+   */
   private buildCatches(): void {
     const lines = this.allLines();
     const total = Math.max(1, this.doc.text.length);
-    const keywords = this.summary.keywords
+    const ordered = this.targets
       .map((k, i) => ({ k, i, first: k.occurrences[0]?.[0] ?? Infinity }))
       .filter((x) => isFinite(x.first))
-      .sort((a, b) => a.first - b.first);
+      .sort((a, b) => a.first - b.first)
+      .map((x, order, all) => ({ ...x, target: ((order + 0.5) / all.length) * total }));
+    const placing = [...ordered.filter((x) => x.k.figure), ...ordered.filter((x) => !x.k.figure)];
     const used: Array<{ page: number; rect: Rect }> = [];
-    keywords.forEach(({ k, i }, order) => {
-      const target = ((order + 0.5) / keywords.length) * total;
+    placing.forEach(({ k, i, target }) => {
       const options = [...k.occurrences].sort((a, b) => Math.abs(a[0] - target) - Math.abs(b[0] - target));
       for (const [s, e] of options.slice(0, 12)) {
         const line = findLine(lines, s);
@@ -175,7 +182,8 @@ export class Director {
           w: words[words.length - 1].x + words[words.length - 1].w - words[0].x,
           h: Math.max(...words.map((w) => w.y + w.h)) - Math.min(...words.map((w) => w.y)),
         };
-        if (used.some((u) => u.page === line.page && overlaps(u.rect, rect, 30))) continue;
+        // Figures sit close together in a results paragraph: they only need not to touch.
+        if (used.some((u) => u.page === line.page && overlaps(u.rect, rect, k.figure ? 2 : 30))) continue;
         used.push({ page: line.page, rect });
         this.catches.push({ keyword: i, page: line.page, line: line.index, rect, caughtAt: null });
         break;
@@ -488,4 +496,16 @@ function findLine(lines: Line[], offset: number): Line | undefined {
 
 function overlaps(a: Rect, b: Rect, pad: number): boolean {
   return a.x - pad < b.x + b.w && b.x - pad < a.x + a.w && a.y - pad < b.y + b.h && b.y - pad < a.y + a.h;
+}
+
+/** What the spider catches: the keywords and, in financial reports, the headline figures. */
+export function catchTargets(summary: Summary): CatchTarget[] {
+  const keywords: CatchTarget[] = summary.keywords.map((k) => ({ label: k.phrase, figure: false, occurrences: k.occurrences }));
+  const figures: CatchTarget[] = (summary.figures ?? []).map((f) => ({
+    label: `${f.tag} ${f.short}`,
+    badge: f.change,
+    figure: true,
+    occurrences: [[f.start, f.end]],
+  }));
+  return [...keywords, ...figures];
 }

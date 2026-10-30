@@ -38,6 +38,7 @@ It's a toy, but an honest one: everything the spider does on screen is the real 
 - 🕷️ **Procedural animation, zero keyframes.** Two-bone inverse kinematics for each of the eight legs, a tetrapod gait (four legs up, then the other four), jumps between pages, a dragline behind it. The spider is drawn as its own rig, so you see how it works.
 - 📄 **Reads real files.** PDFs keep their real look (rendered by pdf.js, with the spider walking on the actual words), plus Word (.docx), Markdown, HTML, plain text and 40+ programming languages.
 - 🔗 **Crawls links too.** Paste a URL: articles, PDFs online, GitHub READMEs, Wikipedia pages.
+- 📈 **Reads financial reports.** Earnings releases, annual reports and analyst notes get a finance mode: the spider catches the headline figures (revenue, net income, margins, EPS…) with their change and period.
 - 🔒 **Private by default.** Files are read in your browser: no upload, no account, no API key. Works offline once loaded.
 - ✨ **Optional AI summary.** Bring your own key for Claude or any OpenAI-compatible endpoint (OpenAI, Ollama, LM Studio, OpenRouter…). Requests go straight from your browser to the provider.
 - 🎬 **Made for video.** A built-in recorder exports MP4/WebM at 1920×1080, **1080×1920 for TikTok, Reels and Shorts**, or 1080×1080. Or render frame-perfect videos from the command line.
@@ -95,6 +96,19 @@ Browsers only let a web page read another site if that site allows it (CORS). So
 The `npx`, Docker and zip versions come with a tiny local fetcher, so they can crawl **any public page**. It only reaches the public internet (no `localhost`, no private network addresses, checked again after every redirect), stops at 20 MB and 15 seconds, and keeps nothing. If you do want to crawl your intranet, start it with `--allow-private`.
 
 Web pages are cleaned up with Mozilla's [Readability](https://github.com/mozilla/readability), like your browser's reader mode, so the spider reads the article, not the menus.
+
+## Financial reports
+
+When a document reads like a financial report (earnings release, annual or half-year report, analyst note), the spider switches to finance mode:
+
+- it finds the **headline figures** as the document states them: revenue, net income, operating income, EBITDA, margins, EPS, free cash flow, net debt, orders, dividend, price target, P/E, and their outlook;
+- each comes with its **change** (`+18%`, `−4%`, `+230 bps`) and **period** (`Q3 2026`, `H1 2026`, `FY 2025`);
+- the spider **catches the figures** like keywords: on the web they read `Revenue $412.6m +18%`;
+- the summary gets a **Key figures** table, the TL;DR is a sentence that states a result, and the Markdown export includes the table.
+
+It reads English and French reports best (`$412.6 million`, `1 234,5 M€`, `en hausse de 7,2 %`), with the main metric names in Spanish, German, Italian and Portuguese too. Try it with the sample: an earnings report from Orbweaver Silkworks, a company that doesn't exist.
+
+Nothing is computed or guessed: a figure only appears if the document says it, and the app gives no opinion or advice.
 
 ## Using it
 
@@ -154,6 +168,8 @@ It runs in a Web Worker in a few milliseconds for a typical article. Connect an 
 
 **The spider.** The body chases a goal point the director moves. Each foot stays planted until it drifts too far from where it would rest, then it steps, in two alternating groups of four: the tetrapod gait real spiders use. Knees come from an analytic two-bone IK solve, bending outward. The abdomen swings when it turns, the dragline is glued down at every turn, and old silk fades so the page stays readable. Open `/playground.html` in dev to play with the rig.
 
+**Finance mode.** A report is detected by its vocabulary and its currency amounts. Each sentence is then matched against a small multilingual dictionary of metrics; the first amount after a metric (in the right unit: money, percent or per share) is its value, a signed or "up/down" percentage around it is its change, and the first period in the sentence (or the document) is its period. Sentences stating a figure weigh more in the summary.
+
 **Falling words.** Every few seconds, as the spider passes a word, it knocks it loose: the word is cut out of the page bitmap, pops, tumbles off with a bit of spin and gravity, and the hole in the paper heals behind it. It's seeded by the document's name, so the same file always drops the same words, and it never touches a keyword the spider is about to catch.
 
 **One canvas.** Pages, spider, silk, falling words, HUD and finale are all drawn on a single `<canvas>`. Pages are rasterized once and drawn as bitmaps, which keeps 60 fps recording cheap.
@@ -194,15 +210,15 @@ If you fork it, change `REPO_URL` in [`src/config.ts`](src/config.ts): it's show
 ```
 src/
   doc/         parsers (PDF, Word, Markdown, HTML, text, code, links) and the page layout engine
-  summarize/   offline summarizer (TextRank, MMR, keyphrases, languages) and optional AI
+  summarize/   offline summarizer (TextRank, MMR, keyphrases, languages, finance mode) and optional AI
   spider/      the procedural spider: IK solver, gait, skins, drawing
   scene/       camera, pages, director, silk, falling words, cocoons, orb web, HUD, finale
   ui/          recorder, Markdown export, share image
   app.ts       DOM wiring: inputs, controls, dialogs
 server/        the local link fetcher (plain Node, no dependencies)
 bin/           the `spider-crawler` command
-scripts/       frame-perfect video renderer, sample PDF generator
-tests/         summarizer, layout, gait, director, falling words, links and fetcher tests (vitest)
+scripts/       frame-perfect video renderer, sample PDF generators
+tests/         summarizer, finance, layout, gait, director, falling words, links and fetcher tests (vitest)
 ```
 
 About 7,000 lines of TypeScript, no UI framework, no runtime dependencies for the command line. `npm test` runs the suite, `npm run build` type-checks and builds.

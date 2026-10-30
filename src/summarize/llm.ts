@@ -49,8 +49,12 @@ Reply with JSON only, nothing before or after it: {"tldr": string, "points": str
 - points: 3 to 6 short bullet points with the key ideas, facts or decisions.
 Write in the same language as the document. Do not invent facts.`;
 
-export async function aiSummarize(name: string, text: string, s: AiSettings, signal?: AbortSignal): Promise<AiSummary> {
+const FINANCE = `
+This is a financial report or analysis. Lead with the results: in the tldr and the points, give the headline figures (revenue, profit, margins, cash, guidance) with their exact values, changes and periods as stated in the document. Do not add opinions or investment advice.`;
+
+export async function aiSummarize(name: string, text: string, s: AiSettings, signal?: AbortSignal, financial = false): Promise<AiSummary> {
   const body = text.length > MAX_CHARS ? `${text.slice(0, MAX_CHARS)}\n[…truncated]` : text;
+  const system = financial ? SYSTEM + FINANCE : SYSTEM;
   const prompt = `Document title: ${name}\n\n<document>\n${body}\n</document>`;
   let reply = '';
   if (s.provider === 'anthropic') {
@@ -65,7 +69,7 @@ export async function aiSummarize(name: string, text: string, s: AiSettings, sig
         // Required for calls made directly from a browser (bring-your-own-key apps).
         'anthropic-dangerous-direct-browser-access': 'true',
       },
-      body: JSON.stringify({ model, max_tokens: 4000, system: SYSTEM, messages: [{ role: 'user', content: prompt }] }),
+      body: JSON.stringify({ model, max_tokens: 4000, system, messages: [{ role: 'user', content: prompt }] }),
     });
     if (!res.ok) throw new Error(await errorText(res, 'Claude'));
     const data = (await res.json()) as { content?: Array<{ type: string; text?: string }> };
@@ -84,7 +88,7 @@ export async function aiSummarize(name: string, text: string, s: AiSettings, sig
         model: s.model,
         temperature: 0.2,
         messages: [
-          { role: 'system', content: SYSTEM },
+          { role: 'system', content: system },
           { role: 'user', content: prompt },
         ],
       }),

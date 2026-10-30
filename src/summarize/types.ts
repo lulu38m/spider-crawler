@@ -1,6 +1,7 @@
+import type { KeyFigure } from './finance';
 import type { Keyword } from './keywords';
 
-export type { Keyword };
+export type { KeyFigure, Keyword };
 
 export interface SummarySentence {
   /** Char range in the source text. */
@@ -42,6 +43,8 @@ export interface Summary {
   keywords: Keyword[];
   stats: SummaryStats;
   code?: CodeFacts;
+  /** Financial reports: headline figures as stated in the document (revenue, net income, margins…). */
+  figures?: KeyFigure[];
   /** Filled in when an optional AI provider is configured. */
   ai?: AiSummary;
 }

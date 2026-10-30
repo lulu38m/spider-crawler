@@ -603,6 +603,64 @@ button {
   font-size: 14px;
 }
 
+.figures {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+}
+
+.figures div {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #f1f3fa;
+}
+
+.figures dt {
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+
+.figures dd {
+  margin: 2px 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 6px;
+}
+
+.figures b {
+  font-size: 18px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.figures .up,
+.figures .down {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.figures .up {
+  color: #1a7f45;
+}
+
+.figures .down {
+  color: #c2255c;
+}
+
+.figures .period {
+  flex-basis: 100%;
+  font-size: 12.5px;
+  color: var(--ink-soft);
+}
+
+.figures-note {
+  margin: 8px 0 0;
+  font-size: 12.5px;
+  color: var(--ink-soft);
+}
+
 .keywords {
   margin: 0;
   display: flex;

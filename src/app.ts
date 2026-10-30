@@ -330,7 +330,7 @@ export function startApp(): void {
     const label = aiLabel(ai);
     setAiStatus(`Asking ${label}…`);
     try {
-      const res = await aiSummarize(doc.name, doc.text, ai, aiAbort.signal);
+      const res = await aiSummarize(doc.name, doc.text, ai, aiAbort.signal, !!summary.figures?.length);
       if (current?.summary !== summary) return;
       summary.ai = res;
       scene.setAiTldr(res.tldr);
@@ -372,6 +372,34 @@ export function startApp(): void {
     } else if (!aiReady(ai)) {
       aiBlock.hidden = true;
     }
+    const figures = summary.figures ?? [];
+    $('summary-figures-block').hidden = !figures.length;
+    $('summary-figures').replaceChildren(
+      ...figures.map((f) => {
+        const item = document.createElement('div');
+        const dt = document.createElement('dt');
+        dt.textContent = f.label;
+        const dd = document.createElement('dd');
+        const value = document.createElement('b');
+        value.textContent = f.value;
+        dd.append(value);
+        if (f.change) {
+          const change = document.createElement('span');
+          change.className = /^[−-]/.test(f.change) ? 'down' : 'up';
+          change.textContent = f.change;
+          dd.append(change);
+        }
+        if (f.period) {
+          const period = document.createElement('span');
+          period.className = 'period';
+          period.textContent = f.period;
+          dd.append(period);
+        }
+        item.append(dt, dd);
+        item.title = current!.doc.text.slice(f.sentence[0], f.sentence[1]);
+        return item;
+      }),
+    );
     $('points-title').textContent = summary.mode === 'code' ? 'Main declarations' : 'Key sentences, in document order';
     const points = summary.points.map((p) => {
       const item = document.createElement('li');

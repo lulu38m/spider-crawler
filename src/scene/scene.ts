@@ -144,6 +144,7 @@ export class Scene {
     this.pages = null;
     this.director = null;
     this.finale = null;
+    this.finaleSlots = null;
     this.pending = null;
     this.aiTldr = null;
     this.falling = null;
@@ -219,9 +220,9 @@ export class Scene {
       {
         onCatch: (mark) => {
           const page = doc.pages[mark.page];
-          const keyword = summary.keywords[mark.keyword];
+          const target = this.director!.targets[mark.keyword];
           const origin = { x: page.x + mark.rect.x + mark.rect.w / 2, y: page.y + mark.rect.y + mark.rect.h / 2 };
-          this.cocoons.spawn(keyword.phrase, mark.keyword, origin, this.time);
+          this.cocoons.spawn(target.label, mark.keyword, origin, this.time, target.badge);
         },
         onWord: (pass) => {
           const page = doc.pages[pass.page];
@@ -299,11 +300,64 @@ export class Scene {
         c.pos = slots.slot(c.slot);
       }
     }
-    for (const mark of fresh) this.cocoons.spawnHanging(this.summary.keywords[mark.keyword].phrase, mark.keyword, this.time, slots);
+    for (const mark of fresh) {
+      const target = this.director.targets[mark.keyword];
+      this.cocoons.spawnHanging(target.label, mark.keyword, this.time, slots, target.badge);
+    }
     this.dragline.reset();
   }
 
   // ── Simulation ─────────────────────────────────────────────────────────
+
+  private finaleSlots: { key: string; slots: Vec2[] } | null = null;
+
+  /**
+   * Where cocoon i hangs on the big web. The web's slots, nudged apart so that long labels
+   * ("Op. income $58.1m +46%") don't cover each other.
+   */
+  private finaleSlot(i: number): Vec2 {
+    const f = this.finale!;
+    const base = f.web.slots;
+    const items = this.cocoons.items;
+    const zoom = f.camera(this.w, this.h).zoom;
+    const key = `${items.length}:${zoom.toFixed(3)}:${this.hud.unit.toFixed(3)}`;
+    if (this.finaleSlots?.key !== key) {
+      // Cocoon size on screen in the finale (unit × 1.45), converted to world units.
+      const u = (this.hud.unit * 1.45) / zoom;
+      const boxes = items.map((c, k) => {
+        const p = base[k % base.length];
+        const chars = c.label.length + (c.badge ? c.badge.length + 1 : 0);
+        return { x: p.x, y: p.y + Math.floor(k / base.length) * 26 * u, w: chars * 7 * u + 26 * u, h: 22 * u };
+      });
+      const pad = 6 * u;
+      for (let iter = 0; iter < 80; iter++) {
+        let moved = false;
+        for (let a = 0; a < boxes.length; a++) {
+          for (let b = a + 1; b < boxes.length; b++) {
+            const A = boxes[a];
+            const B = boxes[b];
+            const ox = (A.w + B.w) / 2 + pad - Math.abs(A.x - B.x);
+            const oy = A.h + pad - Math.abs(A.y - B.y);
+            if (ox <= 0 || oy <= 0) continue;
+            // Separate along the cheaper axis, half each.
+            if (oy < ox) {
+              const d = (oy / 2) * (A.y <= B.y ? -1 : 1);
+              A.y += d;
+              B.y -= d;
+            } else {
+              const d = (ox / 2) * (A.x <= B.x ? -1 : 1);
+              A.x += d;
+              B.x -= d;
+            }
+            moved = true;
+          }
+        }
+        if (!moved) break;
+      }
+      this.finaleSlots = { key, slots: boxes.map((b) => ({ x: b.x, y: b.y })) };
+    }
+    return this.finaleSlots.slots[i] ?? base[i % base.length];
+  }
 
   private slotProvider(): SlotProvider {
     const finale = this.phase === 'finale' && this.finale;
@@ -315,8 +369,7 @@ export class Scene {
       slot: (i: number) => {
         // Staggered hand-over from the corner web to the big web.
         if (t < 1.2 + i * 0.12) return this.hud.slot(i);
-        const p = f.web.slots[i % f.web.slots.length];
-        return this.camera.toScreen(p, this.w, this.h);
+        return this.camera.toScreen(this.finaleSlot(i), this.w, this.h);
       },
     };
   }
@@ -453,6 +506,7 @@ export class Scene {
           wordsTotal: this.director.totalWords,
           caught: this.cocoons.items.length,
           keywords: this.director.catches.length,
+          figures: this.director.catches.some((c) => this.director!.targets[c.keyword].figure),
           progress: this.director.progress,
         },
         now,
