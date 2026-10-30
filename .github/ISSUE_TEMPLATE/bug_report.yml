@@ -1,0 +1,26 @@
+name: Bug report
+description: Something went wrong while the spider was reading a file.
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you expect, and what did you see instead?
+    validations:
+      required: true
+  - type: input
+    id: file
+    attributes:
+      label: File type
+      placeholder: PDF, .docx, Markdown, Python file…
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and OS
+      placeholder: Chrome 140 on macOS 15
+  - type: textarea
+    id: extra
+    attributes:
+      label: Screenshot or console output
+      description: If you can share the file (or a similar one), attach it. Please don't share anything private.

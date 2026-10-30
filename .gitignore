@@ -1,0 +1,12 @@
+node_modules
+dist
+.DS_Store
+*.log
+.vite
+coverage
+scripts/.frames
+tests/_scratch*.test.ts
+.idea/
+.vscode/
+*.tgz
+release/out/

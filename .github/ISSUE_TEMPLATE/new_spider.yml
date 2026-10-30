@@ -1,0 +1,24 @@
+name: New spider
+description: Propose (or claim) a new skeleton skin.
+labels: [skin, good first issue]
+body:
+  - type: input
+    id: name
+    attributes:
+      label: Name
+      placeholder: Disco
+    validations:
+      required: true
+  - type: textarea
+    id: look
+    attributes:
+      label: What does it look like?
+      description: Body shape (ellipse, rect, hex, diamond, circle or something new), joints, eyes, the two leg colors, proportions.
+    validations:
+      required: true
+  - type: checkboxes
+    id: pr
+    attributes:
+      label: Contribution
+      options:
+        - label: I'd like to open the pull request myself

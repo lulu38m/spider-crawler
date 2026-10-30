@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Spider Crawler: a literal web crawler</title>
+    <meta name="description" content="Drop a document and watch a procedurally animated spider crawl it, highlight what matters, catch the keywords in its web and spin you a summary. Runs entirely in your browser." />
+    <meta name="theme-color" content="#19315f" />
+    <meta property="og:title" content="Spider Crawler: a literal web crawler" />
+    <meta property="og:description" content="Drop a document, watch a spider read it, get the gist." />
+    <meta property="og:image" content="https://lulu38m.github.io/spider-crawler/og.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+  </head>
+  <body>
+    <h1 class="sr-only">Spider Crawler, a literal web crawler</h1>
+    <main id="app">
+      <canvas id="stage" role="img" aria-label="A spider walking on a sheet of paper"></canvas>
+
+      <button id="home-btn" class="home-btn" type="button" aria-label="Back to home" title="Back to home"></button>
+
+      <header class="topbar">
+        <div class="topbar-actions">
+          <button id="ai-btn" class="chip" type="button" aria-haspopup="dialog">
+            <svg aria-hidden="true" viewBox="0 0 20 20"><path d="M10 2.5l1.6 4.3 4.4 1.6-4.4 1.6L10 14.3 8.4 10 4 8.4l4.4-1.6z" /><path d="M15.5 13l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7z" /></svg>
+            <span>AI summary: <b id="ai-state">off</b></span>
+          </button>
+          <a id="gh-link" class="chip icon-only" href="#" target="_blank" rel="noopener" aria-label="Source code on GitHub">
+            <svg aria-hidden="true" viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z" /></svg>
+          </a>
+        </div>
+      </header>
+
+      <section id="idle-panel" class="idle-panel" aria-label="Choose a document">
+        <div class="idle-actions">
+          <button id="pick-btn" class="btn primary" type="button">Choose a file</button>
+          <button id="paste-btn" class="btn outline" type="button">Paste text</button>
+          <form id="url-form" class="url-form" role="search" aria-label="Crawl a link">
+            <svg aria-hidden="true" viewBox="0 0 20 20"><path d="M8.5 11.5a3.5 3.5 0 005 0l2.5-2.5a3.5 3.5 0 00-5-5l-1 1" /><path d="M11.5 8.5a3.5 3.5 0 00-5 0L4 11a3.5 3.5 0 005 5l1-1" /></svg>
+            <input id="url-input" type="text" inputmode="url" autocomplete="url" spellcheck="false" placeholder="Paste a link" aria-label="Link to crawl" />
+            <button class="url-go" type="submit" aria-label="Crawl this link">
+              <svg aria-hidden="true" viewBox="0 0 20 20"><path d="M4 10h11M11 5.5l4.5 4.5-4.5 4.5" /></svg>
+            </button>
+          </form>
+        </div>
+        <div class="samples">
+          <span class="samples-label">Or try</span>
+          <button class="link" type="button" data-sample="spider-silk.md">an article on spider silk</button>
+          <button class="link" type="button" data-sample="arachnid-reading.pdf">a research paper (PDF)</button>
+          <button class="link" type="button" data-sample="code">the spider's own source code</button>
+        </div>
+        <p class="fine">PDF, Word, Markdown, HTML, text, code or a link. Your files never leave your browser.</p>
+        <input id="file-input" type="file" hidden />
+      </section>
+
+      <nav id="controls" class="controls" aria-label="Playback" hidden>
+        <button id="pause-btn" class="ctl" type="button" aria-pressed="false">
+          <svg class="i-pause" aria-hidden="true" viewBox="0 0 20 20"><rect x="5" y="4" width="3.4" height="12" rx="1" /><rect x="11.6" y="4" width="3.4" height="12" rx="1" /></svg>
+          <svg class="i-play" aria-hidden="true" viewBox="0 0 20 20"><path d="M6 4.2v11.6c0 .7.8 1.1 1.4.7l8.6-5.8c.5-.4.5-1.1 0-1.4L7.4 3.5C6.8 3.1 6 3.5 6 4.2z" /></svg>
+          <span class="label">Pause</span>
+        </button>
+        <div class="seg" role="radiogroup" aria-label="Speed">
+          <button type="button" role="radio" data-speed="0.5">½×</button>
+          <button type="button" role="radio" data-speed="1">1×</button>
+          <button type="button" role="radio" data-speed="2">2×</button>
+          <button type="button" role="radio" data-speed="4">4×</button>
+        </div>
+        <label class="pick">
+          <span class="sr-only">Spider</span>
+          <select id="skin-select" aria-label="Spider"></select>
+        </label>
+        <label class="pick">
+          <span class="sr-only">Frame</span>
+          <select id="frame-select" aria-label="Frame">
+            <option value="fill" title="Use the whole window">Window</option>
+            <option value="16:9" title="1920×1080, for YouTube">16:9</option>
+            <option value="9:16" title="1080×1920, for TikTok, Reels and Shorts">9:16</option>
+            <option value="1:1" title="1080×1080">1:1</option>
+          </select>
+        </label>
+        <button id="rec-btn" class="ctl rec" type="button" aria-pressed="false">
+          <span class="dot" aria-hidden="true"></span>
+          <span class="label">Record</span>
+        </button>
+        <button id="skip-btn" class="ctl" type="button">Skip to summary</button>
+        <button id="summary-btn" class="ctl strong" type="button" hidden>Show summary</button>
+        <button id="new-btn" class="ctl" type="button">New document</button>
+      </nav>
+
+      <aside id="summary" class="summary" aria-labelledby="summary-title" hidden>
+        <div class="summary-head">
+          <p id="summary-file" class="summary-file"></p>
+          <button id="summary-close" class="close" type="button" aria-label="Close summary">
+            <svg aria-hidden="true" viewBox="0 0 20 20"><path d="M5 5l10 10M15 5L5 15" /></svg>
+          </button>
+        </div>
+        <h2 id="summary-title">The gist</h2>
+        <p id="summary-tldr" class="tldr"></p>
+        <section id="summary-ai" class="ai-block" hidden>
+          <h3 id="summary-ai-title">AI summary</h3>
+          <p id="summary-ai-status" class="ai-status"></p>
+          <ul id="summary-ai-points"></ul>
+        </section>
+        <section>
+          <h3 id="points-title">Key sentences</h3>
+          <ul id="summary-points" class="points"></ul>
+        </section>
+        <section>
+          <h3>Keywords</h3>
+          <p id="summary-keywords" class="keywords"></p>
+        </section>
+        <p id="summary-stats" class="stats"></p>
+        <div class="summary-actions">
+          <button id="copy-md" class="btn primary" type="button">Copy as Markdown</button>
+          <button id="dl-md" class="btn outline" type="button">Download .md</button>
+          <button id="dl-png" class="btn outline" type="button">Save image</button>
+          <button id="again-btn" class="btn outline" type="button">Crawl another</button>
+        </div>
+      </aside>
+
+      <dialog id="paste-dialog" class="sheet" aria-labelledby="paste-title">
+        <form method="dialog" id="paste-form">
+          <h2 id="paste-title">Paste text</h2>
+          <label class="field">
+            <span>Title (optional)</span>
+            <input id="paste-name" type="text" placeholder="Untitled" autocomplete="off" />
+          </label>
+          <label class="field">
+            <span>Text or Markdown</span>
+            <textarea id="paste-text" rows="10" placeholder="Paste an article, notes, a README…" required></textarea>
+          </label>
+          <div class="sheet-actions">
+            <button class="btn outline" value="cancel" type="submit" formnovalidate>Cancel</button>
+            <button class="btn primary" value="ok" type="submit">Crawl this text</button>
+          </div>
+        </form>
+      </dialog>
+
+      <dialog id="ai-dialog" class="sheet" aria-labelledby="ai-title">
+        <form method="dialog" id="ai-form">
+          <h2 id="ai-title">AI summary</h2>
+          <p class="sheet-intro">The spider always makes its own summary, offline. Connect a model to also get a rewritten one. Requests go straight from your browser to the provider, with your key.</p>
+          <fieldset class="field">
+            <legend>Provider</legend>
+            <label class="radio"><input type="radio" name="provider" value="off" /> Off (offline summary only)</label>
+            <label class="radio"><input type="radio" name="provider" value="anthropic" /> Claude, with an Anthropic API key</label>
+            <label class="radio"><input type="radio" name="provider" value="openai" /> OpenAI-compatible (OpenAI, Ollama, LM Studio, OpenRouter…)</label>
+          </fieldset>
+          <label class="field" data-for="anthropic openai">
+            <span>API key</span>
+            <input id="ai-key" type="password" autocomplete="off" spellcheck="false" placeholder="Stored in this browser only" />
+          </label>
+          <label class="field" data-for="anthropic openai">
+            <span>Model</span>
+            <input id="ai-model" type="text" autocomplete="off" spellcheck="false" />
+          </label>
+          <label class="field" data-for="openai">
+            <span>Base URL</span>
+            <input id="ai-base" type="url" autocomplete="off" spellcheck="false" placeholder="https://api.openai.com/v1" />
+            <small>For Ollama use http://localhost:11434/v1 and start it with OLLAMA_ORIGINS set to this page's address.</small>
+          </label>
+          <div class="sheet-actions">
+            <button class="btn outline" value="cancel" type="submit" formnovalidate>Cancel</button>
+            <button class="btn primary" value="ok" type="submit">Save</button>
+          </div>
+        </form>
+      </dialog>
+
+      <div id="rec-badge" class="rec-badge" hidden aria-hidden="true"><span class="dot"></span><span id="rec-time">0:00</span></div>
+      <div id="toasts" class="toasts" role="status" aria-live="polite"></div>
+      <div id="drop-hint" class="drop-hint" hidden>Drop to start crawling</div>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

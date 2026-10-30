@@ -1,0 +1,14 @@
+name: Idea
+description: A feature, a file format, a language, anything.
+labels: [idea]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would you like the spider to do?
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why would it be useful or fun?

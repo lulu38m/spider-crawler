@@ -1,0 +1,10 @@
+node_modules
+dist
+docs
+.git
+.github
+.idea
+.vscode
+*.log
+coverage
+scripts/.frames
