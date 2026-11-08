@@ -3,7 +3,8 @@ import { REPO_LABEL } from '../config';
 import type { Doc } from '../doc/types';
 import { DEFAULT_DRAW, drawSpider } from '../spider/draw';
 import type { Skin } from '../spider/skins';
-import { Spider } from '../spider/spider';
+import { Spider, type SpiderMode } from '../spider/spider';
+import type { SoundEvent } from '../audio/sfx';
 import type { Summary } from '../summarize/types';
 import { clip } from '../summarize';
 import { drawBackdrop } from './background';
@@ -24,6 +25,8 @@ export interface SceneCallbacks {
   onPhase?(phase: Phase): void;
   /** The finale finished writing: a good moment to show the full summary. */
   onFinaleSettled?(): void;
+  /** Something made a sound (a step, a catch…): the page decides whether and how to play it. */
+  onSound?(e: SoundEvent): void;
 }
 
 export interface CrawlStats {
@@ -78,9 +81,20 @@ export class Scene {
   private finaleContent: FinaleContent | null = null;
   private finaleSettled = false;
   private cardAlpha = 1;
+  private lastMode: SpiderMode = 'walk';
 
   constructor(skin: Skin, private cb: SceneCallbacks = {}) {
     this.spider = new Spider({ x: 0, y: 0 }, skin, -Math.PI / 2);
+    this.spider.onStep = (leg) => this.sound({ kind: 'step', volume: this.isIdle ? 0.6 : 1 }, leg.foot);
+    this.spider.onLand = () => this.sound({ kind: 'land', volume: this.isIdle ? 0.6 : 1 }, this.spider.pos);
+    this.cocoons.onArrive = () => this.sound({ kind: 'deliver' });
+  }
+
+  /** Sounds are events for the page to play: the scene only says what happened, and where. */
+  private sound(e: SoundEvent, world?: Vec2): void {
+    if (!this.cb.onSound) return;
+    if (world) e.pan = clamp((this.camera.toScreen(world, this.w, this.h).x / this.w) * 2 - 1, -1, 1) * 0.6;
+    this.cb.onSound(e);
   }
 
   // ── Setup ──────────────────────────────────────────────────────────────
@@ -222,14 +236,16 @@ export class Scene {
           const page = doc.pages[mark.page];
           const target = this.director!.targets[mark.keyword];
           const origin = { x: page.x + mark.rect.x + mark.rect.w / 2, y: page.y + mark.rect.y + mark.rect.h / 2 };
-          this.cocoons.spawn(target.label, mark.keyword, origin, this.time, target.badge);
+          this.cocoons.spawn(target.label, mark.keyword, origin, this.time, target.badge, target.flag);
+          this.sound({ kind: 'catch', index: this.cocoons.items.length - 1, accent: target.flag ? 'flag' : target.figure ? 'figure' : undefined }, origin);
         },
         onWord: (pass) => {
           const page = doc.pages[pass.page];
-          falling.consider(pass, this.time, Math.sign(Math.cos(this.spider.heading)), () => {
+          const dropped = falling.consider(pass, this.time, Math.sign(Math.cos(this.spider.heading)), () => {
             const cut = pages.cutWord(page, pass.word);
             return cut && { ...cut, origin: { x: page.x, y: page.y } };
           });
+          if (dropped) this.sound({ kind: 'fall' }, { x: page.x + pass.word.x, y: page.y + pass.word.y });
         },
         onFinale: () => this.enterFinale(),
       },
@@ -247,6 +263,7 @@ export class Scene {
   private enterFinale(): void {
     if (!this.finale || !this.summary || !this.doc) return;
     this.setPhase('finale');
+    this.sound({ kind: 'finale' });
     this.finale.begin(this.time);
     this.spider.face = Math.PI / 2;
     this.spider.goal = { ...this.finale.hub };
@@ -302,7 +319,7 @@ export class Scene {
     }
     for (const mark of fresh) {
       const target = this.director.targets[mark.keyword];
-      this.cocoons.spawnHanging(target.label, mark.keyword, this.time, slots, target.badge);
+      this.cocoons.spawnHanging(target.label, mark.keyword, this.time, slots, target.badge, target.flag);
     }
     this.dragline.reset();
   }
@@ -380,6 +397,13 @@ export class Scene {
     if (dt <= 0) return;
     this.time += dt;
     const now = this.time;
+    // Leaps and rappels start inside the director or the landing page: hear them when they begin.
+    const mode = this.spider.mode;
+    if (mode !== this.lastMode) {
+      if (mode === 'jump') this.sound({ kind: 'jump', volume: this.isIdle ? 0.6 : 1 }, this.spider.pos);
+      if (mode === 'rappel') this.sound({ kind: 'rappel' }, this.spider.pos);
+      this.lastMode = mode;
+    }
 
     switch (this.phase) {
       case 'idle':
@@ -506,7 +530,11 @@ export class Scene {
           wordsTotal: this.director.totalWords,
           caught: this.cocoons.items.length,
           keywords: this.director.catches.length,
-          figures: this.director.catches.some((c) => this.director!.targets[c.keyword].figure),
+          kinds: this.director.catches.some((c) => this.director!.targets[c.keyword].flag)
+            ? 'clauses and keywords'
+            : this.director.catches.some((c) => this.director!.targets[c.keyword].figure)
+              ? 'figures and keywords'
+              : 'keywords',
           progress: this.director.progress,
         },
         now,

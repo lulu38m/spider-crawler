@@ -129,7 +129,11 @@ export class Director {
 
   private buildHighlights(): void {
     const lines = this.allLines();
-    this.summary.points.forEach((point, pi) => {
+    // Clauses to read are highlighted in red; a summary sentence that is also a clause stays red.
+    const clauses = (this.summary.clauses ?? []).map((c) => ({ start: c.sentence[0], end: c.sentence[1], flag: true }));
+    const flagged = new Set(clauses.map((c) => c.start));
+    const spans = [...this.summary.points.filter((p) => !flagged.has(p.start)).map((p) => ({ start: p.start, end: p.end, flag: false })), ...clauses];
+    spans.forEach((point, pi) => {
       for (const line of lines) {
         if (line.end <= point.start || line.start >= point.end) continue;
         const words = line.words.filter((w) => w.end > point.start && w.start < point.end);
@@ -145,6 +149,7 @@ export class Director {
           from: Infinity,
           to: -Infinity,
           seed: (pi * 31 + line.index * 17 + line.page * 7) >>> 0,
+          ...(point.flag ? { tone: 'flag' as const } : {}),
         };
         this.highlights.push(seg);
         const key = `${line.page}:${line.index}`;
@@ -507,5 +512,12 @@ export function catchTargets(summary: Summary): CatchTarget[] {
     figure: true,
     occurrences: [[f.start, f.end]],
   }));
-  return [...keywords, ...figures];
+  const clauses: CatchTarget[] = (summary.clauses ?? []).map((c) => ({
+    label: c.tag,
+    badge: c.detail,
+    figure: true,
+    flag: true,
+    occurrences: [[c.start, c.end]],
+  }));
+  return [...keywords, ...figures, ...clauses];
 }

@@ -13,6 +13,8 @@ export interface Cocoon {
   label: string;
   /** A figure's change ("+18%"), drawn in green or pink after the label. */
   badge?: string;
+  /** A clause to read: drawn in red. */
+  flag?: boolean;
   keyword: number;
   state: CocoonState;
   /** Scene time the state started. */
@@ -41,16 +43,19 @@ export interface SlotProvider {
 }
 
 export class Cocoons {
+  /** A cocoon reached the web. */
+  onArrive?: () => void;
   items: Cocoon[] = [];
 
   reset(): void {
     this.items = [];
   }
 
-  spawn(label: string, keyword: number, origin: Vec2, now: number, badge?: string): void {
+  spawn(label: string, keyword: number, origin: Vec2, now: number, badge?: string, flag?: boolean): void {
     this.items.push({
       label,
       badge,
+      flag,
       keyword,
       state: 'wrapping',
       since: now,
@@ -65,10 +70,10 @@ export class Cocoons {
   }
 
   /** Put cocoons straight into the web (skip button). */
-  spawnHanging(label: string, keyword: number, now: number, slots: SlotProvider, badge?: string): void {
+  spawnHanging(label: string, keyword: number, now: number, slots: SlotProvider, badge?: string, flag?: boolean): void {
     const slot = this.items.length;
     const p = slots.slot(slot);
-    this.items.push({ label, badge, keyword, state: 'hanging', since: now, origin: p, from: p, pos: { ...p }, slot, angle: 0.3, angVel: 0, big: 0 });
+    this.items.push({ label, badge, flag, keyword, state: 'hanging', since: now, origin: p, from: p, pos: { ...p }, slot, angle: 0.3, angVel: 0, big: 0 });
   }
 
   update(dt: number, now: number, toScreen: (p: Vec2) => Vec2, slots: SlotProvider): void {
@@ -92,6 +97,7 @@ export class Cocoons {
         c.angle = Math.sin(t * Math.PI * 3) * 0.5 * (1 - t);
         if (t >= 1) {
           c.state = 'hanging';
+          this.onArrive?.();
           c.since = now;
           c.angVel = 2.5;
         }
@@ -145,9 +151,9 @@ export class Cocoons {
         ctx.lineTo(tip.x, tip.y);
         ctx.stroke();
         ctx.restore();
-        drawCocoon(ctx, c.label, tip, c.angle * 0.6, u, alpha, true, c.badge);
+        drawCocoon(ctx, c.label, tip, c.angle * 0.6, u, alpha, true, c.badge, c.flag);
       } else {
-        drawCocoon(ctx, c.label, c.pos, c.angle, u, alpha, false, c.badge);
+        drawCocoon(ctx, c.label, c.pos, c.angle, u, alpha, false, c.badge, c.flag);
       }
     }
   }
@@ -155,7 +161,7 @@ export class Cocoons {
 
 const widthCache = new Map<string, number>();
 
-export function drawCocoon(ctx: CanvasRenderingContext2D, label: string, top: Vec2, angle: number, u: number, alpha: number, hanging: boolean, badge?: string): void {
+export function drawCocoon(ctx: CanvasRenderingContext2D, label: string, top: Vec2, angle: number, u: number, alpha: number, hanging: boolean, badge?: string, flag = false): void {
   const font = `600 ${12 * u}px ${UI_FONT}`;
   const badgeFont = `700 ${11.5 * u}px ${UI_FONT}`;
   ctx.save();
@@ -186,17 +192,24 @@ export function drawCocoon(ctx: CanvasRenderingContext2D, label: string, top: Ve
   ctx.shadowBlur = 10 * u;
   ctx.shadowOffsetY = 4 * u;
   const grad = ctx.createLinearGradient(0, y0, 0, y0 + h);
-  grad.addColorStop(0, '#ffffff');
-  grad.addColorStop(1, '#d6dbea');
+  // Clauses to read are caught in red.
+  grad.addColorStop(0, flag ? '#fff1f2' : '#ffffff');
+  grad.addColorStop(1, flag ? '#ffc9cf' : '#d6dbea');
   ctx.fillStyle = grad;
   roundRect(ctx, -w / 2, y0, w, h, h / 2);
   ctx.fill();
   ctx.shadowColor = 'transparent';
+  if (flag) {
+    ctx.strokeStyle = '#e03131';
+    ctx.lineWidth = 1.6 * u;
+    roundRect(ctx, -w / 2, y0, w, h, h / 2);
+    ctx.stroke();
+  }
   // Silk strands wound around it.
   ctx.save();
   roundRect(ctx, -w / 2, y0, w, h, h / 2);
   ctx.clip();
-  ctx.strokeStyle = 'rgba(140, 150, 190, 0.35)';
+  ctx.strokeStyle = flag ? 'rgba(224, 49, 49, 0.25)' : 'rgba(140, 150, 190, 0.35)';
   ctx.lineWidth = 0.7 * u;
   ctx.beginPath();
   for (let x = -w / 2 - h; x < w / 2 + h; x += 5 * u) {
@@ -205,7 +218,7 @@ export function drawCocoon(ctx: CanvasRenderingContext2D, label: string, top: Ve
   }
   ctx.stroke();
   ctx.restore();
-  ctx.fillStyle = '#23253a';
+  ctx.fillStyle = flag ? '#a51d2d' : '#23253a';
   ctx.textBaseline = 'middle';
   if (!badge) {
     ctx.textAlign = 'center';
@@ -216,7 +229,7 @@ export function drawCocoon(ctx: CanvasRenderingContext2D, label: string, top: Ve
     const x0 = -(tw + gap + bw) / 2;
     ctx.fillText(label, x0, y0 + h / 2 + 0.5 * u);
     ctx.font = badgeFont;
-    ctx.fillStyle = badge.startsWith('−') || badge.startsWith('-') ? '#d6336c' : '#1f9d55';
+    ctx.fillStyle = flag ? '#e03131' : badge.startsWith('−') || badge.startsWith('-') ? '#d6336c' : '#1f9d55';
     ctx.fillText(badge, x0 + tw + gap, y0 + h / 2 + 0.5 * u);
   }
   ctx.restore();

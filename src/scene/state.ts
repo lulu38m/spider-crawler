@@ -11,6 +11,8 @@ export interface HighlightSeg {
   x1: number;
   top: number;
   bottom: number;
+  /** Red for clauses to read (terms mode); yellow otherwise. */
+  tone?: 'flag';
   /** Covered so far (page-local x). from > to means nothing yet. */
   from: number;
   to: number;
@@ -24,6 +26,8 @@ export interface CatchTarget {
   /** A figure's change, shown in green or pink on the cocoon: "+18%". */
   badge?: string;
   figure: boolean;
+  /** A clause to read (terms mode): caught in red. */
+  flag?: boolean;
   occurrences: Array<[number, number]>;
 }
 

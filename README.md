@@ -38,10 +38,12 @@ It's a toy, but an honest one: everything the spider does on screen is the real 
 - 🕷️ **Procedural animation, zero keyframes.** Two-bone inverse kinematics for each of the eight legs, a tetrapod gait (four legs up, then the other four), jumps between pages, a dragline behind it. The spider is drawn as its own rig, so you see how it works.
 - 📄 **Reads real files.** PDFs keep their real look (rendered by pdf.js, with the spider walking on the actual words), plus Word (.docx), Markdown, HTML, plain text and 40+ programming languages.
 - 🔗 **Crawls links too.** Paste a URL: articles, PDFs online, GitHub READMEs, Wikipedia pages.
+- 🚩 **Reads the terms nobody reads.** Terms of service, privacy policies and contracts get a terms mode: the spider catches the clauses worth reading in red (automatic renewal, commitment, cancellation, fees, refunds, data sharing, rights over your content, arbitration…).
 - 📈 **Reads financial reports.** Earnings releases, annual reports and analyst notes get a finance mode: the spider catches the headline figures (revenue, net income, margins, EPS…) with their change and period.
 - 🔒 **Private by default.** Files are read in your browser: no upload, no account, no API key. Works offline once loaded.
 - ✨ **Optional AI summary.** Bring your own key for Claude or any OpenAI-compatible endpoint (OpenAI, Ollama, LM Studio, OpenRouter…). Requests go straight from your browser to the provider.
-- 🎬 **Made for video.** A built-in recorder exports MP4/WebM at 1920×1080, **1080×1920 for TikTok, Reels and Shorts**, or 1080×1080. Or render frame-perfect videos from the command line.
+- 🎬 **Made for video.** A built-in recorder exports MP4/WebM at 1920×1080, **1080×1920 for TikTok, Reels and Shorts**, or 1080×1080, **with sound**. Or render frame-perfect videos from the command line.
+- 🔊 **ASMR included.** Tiny footsteps on paper, silk zipping out on a rappel, a pop when a word falls, a note for every keyword caught (they play a little tune). All synthesized live, no audio files. <kbd>M</kbd> mutes it.
 - 🦾 **Six spiders.** Blueprint, Boxy, Hexa, Neon, Stilts and Sketch. Adding one is ten lines of data.
 - 🌍 **Six languages** for summaries: English, French, Spanish, German, Italian, Portuguese.
 
@@ -110,6 +112,26 @@ It reads English and French reports best (`$412.6 million`, `1 234,5 M€`, `en 
 
 Nothing is computed or guessed: a figure only appears if the document says it, and the app gives no opinion or advice.
 
+## Terms and contracts
+
+When a document reads like terms of service, a privacy policy or a contract, the spider switches to terms mode. It looks for the clauses people sign without reading, by their wording, in English and French:
+
+| | What it looks for |
+| --- | --- |
+| Automatic renewal | "renews automatically", "recurring billing", "tacite reconduction" |
+| Commitment | "minimum term", "durée d'engagement" |
+| Cancellation | notice periods, termination fees, "résiliation", "préavis" |
+| Fees and price changes | late fees, penalties, "we may change our prices" |
+| No refunds | "non-refundable", "aucun remboursement" |
+| Data sharing and tracking | sharing with partners or advertisers, location data, retention |
+| Rights over your content | "worldwide, royalty-free, perpetual license" |
+| Arbitration | binding arbitration, class action waivers |
+| Liability, changes, account closure | "as is", "we may modify these terms at any time", "at our sole discretion" |
+
+Each clause is **highlighted in red** on the page, caught in a **red cocoon** with its detail (`Cancellation 30 days`, `Fees €5`), and listed in the summary under **Clauses to read** with a one-line explanation and the quote. Try it with the sample: the terms of Silkthread Cloud, a service that doesn't exist.
+
+It flags, it doesn't judge: a flagged clause can be perfectly fair. It's not legal advice, it's a reason to read that paragraph.
+
 ## Using it
 
 Click the logo in the top left to come back to the start at any time.
@@ -121,6 +143,7 @@ Click the logo in the top left to come back to the start at any time.
 | <kbd>S</kbd> | Next spider |
 | <kbd>R</kbd> | Start / stop recording |
 | <kbd>K</kbd> | Skip to the summary |
+| <kbd>M</kbd> | Sound on / off |
 | <kbd>N</kbd> | New document |
 | <kbd>Esc</kbd> | Close the summary |
 
@@ -137,7 +160,7 @@ npx playwright-core install chromium   # once
 npm run demo:render -- --file ~/Documents/thesis.pdf --frame 9:16 --out my-video.mp4
 ```
 
-Options: `--frame 16:9|9:16|1:1`, `--skin boxy`, `--speed 2`, `--sample arachnid-reading.pdf`, `--gif out.gif`. Needs ffmpeg on your PATH.
+Options: `--frame 16:9|9:16|1:1`, `--skin boxy`, `--speed 2`, `--sample arachnid-reading.pdf`, `--gif out.gif`, `--mute`. The soundtrack is rendered offline on the video's own clock, so every footstep lands on its frame. Needs ffmpeg on your PATH.
 
 Deep links work too: `?sample=spider-silk.md&skin=neon&speed=2&frame=9:16`.
 
@@ -210,7 +233,7 @@ If you fork it, change `REPO_URL` in [`src/config.ts`](src/config.ts): it's show
 ```
 src/
   doc/         parsers (PDF, Word, Markdown, HTML, text, code, links) and the page layout engine
-  summarize/   offline summarizer (TextRank, MMR, keyphrases, languages, finance mode) and optional AI
+  summarize/   offline summarizer (TextRank, MMR, keyphrases, languages, finance and terms modes) and optional AI
   spider/      the procedural spider: IK solver, gait, skins, drawing
   scene/       camera, pages, director, silk, falling words, cocoons, orb web, HUD, finale
   ui/          recorder, Markdown export, share image
@@ -218,7 +241,7 @@ src/
 server/        the local link fetcher (plain Node, no dependencies)
 bin/           the `spider-crawler` command
 scripts/       frame-perfect video renderer, sample PDF generators
-tests/         summarizer, finance, layout, gait, director, falling words, links and fetcher tests (vitest)
+tests/         summarizer, finance, terms, sound, layout, gait, director, falling words, links and fetcher tests (vitest)
 ```
 
 About 7,000 lines of TypeScript, no UI framework, no runtime dependencies for the command line. `npm test` runs the suite, `npm run build` type-checks and builds.

@@ -18,6 +18,8 @@ export const PALETTE = {
   pink: '#ff4f86',
   blue: '#3f9cf0',
   highlighter: 'rgba(255, 204, 41, 0.6)',
+  /** Clauses to read (terms mode). */
+  flag: 'rgba(255, 99, 112, 0.42)',
   dew: '#ffffff',
   hudText: 'rgba(232, 236, 247, 0.86)',
   hudMuted: 'rgba(232, 236, 247, 0.55)',

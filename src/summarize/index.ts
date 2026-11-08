@@ -1,4 +1,5 @@
 import { extractFigures, isReportFiller } from './finance';
+import { findClauses, isContractFiller } from './terms';
 import { extractKeywords } from './keywords';
 import { summarizeCode } from './code';
 import { stopwordsFor } from './stopwords';
@@ -35,12 +36,17 @@ export function summarize(text: string, options: SummarizeOptions = {}): Summary
   const tokens = tokenize(text, language);
   const words = countWords(text, language);
   // Financial reports: the headline figures, which the spider catches along with the keywords.
-  const figures = extractFigures(text, sentences, language);
-  const figureSentences = new Set(figures.map((f) => f.sentence[0]));
+  // Terms and contracts: the clauses worth reading, which the spider catches in red.
+  const clauses = findClauses(text, sentences, language);
+  const figures = clauses.length ? [] : extractFigures(text, sentences, language);
+  const figureSentences = new Set([...figures.map((f) => f.sentence[0]), ...clauses.map((c) => c.sentence[0])]);
+  const resultSentences = new Set(figures.map((f) => f.sentence[0]));
   let maxKeywords = options.maxKeywords ?? (words < 300 ? 5 : words < 1500 ? 8 : 10);
   // Figures and keywords share the web: about ten cocoons fit.
-  if (figures.length) maxKeywords = Math.min(maxKeywords, Math.max(4, 10 - figures.length));
-  let keywords = extractKeywords(text, tokens, stop, maxKeywords + (figures.length ? 6 : 0));
+  const special = figures.length + clauses.length;
+  if (special) maxKeywords = Math.min(maxKeywords, Math.max(clauses.length ? 2 : 3, 10 - special));
+  let keywords = extractKeywords(text, tokens, stop, maxKeywords + (special ? 6 : 0));
+  if (clauses.length) keywords = keywords.filter((k) => !isContractFiller(k.phrase)).slice(0, maxKeywords);
   if (figures.length) {
     // "Revenue" as a keyword next to "Revenue $412.6m" as a figure says the same thing twice.
     const labelWords = new Set(figures.flatMap((f) => f.label.split(/\s+/)).map((w) => normalizeWord(w)));
@@ -98,7 +104,7 @@ export function summarize(text: string, options: SummarizeOptions = {}): Summary
 
   if (candidates.length === 0) {
     const fallback = sentences.slice(0, 2).map((s) => s.text).join(' ') || text.trim();
-    return { mode: 'prose', language, tldr: clip(fallback, 320), points: [], keywords, stats, ...(figures.length ? { figures } : {}) };
+    return { mode: 'prose', language, tldr: clip(fallback, 320), points: [], keywords, stats, ...(figures.length ? { figures } : {}), ...(clauses.length ? { clauses } : {}) };
   }
 
   // Very long documents: keep the most promising sentences so the O(n²) graph stays fast.
@@ -137,7 +143,7 @@ export function summarize(text: string, options: SummarizeOptions = {}): Summary
     for (const t of c.tokens) if (keywordStarts.has(t.start)) kwHits++;
     const keywordBoost = 1 + Math.min(0.3, 0.07 * kwHits);
     // In a report, the sentences that state the results are the ones worth highlighting.
-    const figureBoost = figureSentences.has(s.start) ? 1.35 : 1;
+    const figureBoost = resultSentences.has(s.start) ? 1.35 : 1;
     return pr[i] * lead * paragraphLead * lengthFactor * keywordBoost * standalone * question * abstract * figureBoost;
   });
 
@@ -154,12 +160,12 @@ export function summarize(text: string, options: SummarizeOptions = {}): Summary
   // TL;DR: the strongest point, nudged toward the beginning (documents tend to state their point early).
   // Short notes have too few sentences for a graph to mean much: their first real sentence wins.
   const tldrScore = (p: SummarySentence) =>
-    p.score * (1 + 0.8 * Math.pow(1 - p.start / Math.max(1, text.length), 2)) * (figureSentences.has(p.start) ? 1.25 : 1);
+    p.score * (1 + 0.8 * Math.pow(1 - p.start / Math.max(1, text.length), 2)) * (resultSentences.has(p.start) ? 1.25 : 1);
   // In a report, the gist is the results: pick among the sentences that state a headline figure.
-  const withFigures = points.filter((p) => figureSentences.has(p.start));
+  const withFigures = points.filter((p) => resultSentences.has(p.start));
   let best = (withFigures.length ? withFigures : points).reduce((a, b) => (tldrScore(b) > tldrScore(a) ? b : a));
   // A report's first sentence often just announces it ("X today reported…"): its results say more.
-  if (candidates.length <= 10 && !(figures.length && !figureSentences.has(sentences[candidates[0].idx].start))) {
+  if (candidates.length <= 10 && !(figures.length && !resultSentences.has(sentences[candidates[0].idx].start))) {
     const first = sentences[candidates[0].idx];
     if (!first.text.endsWith('?')) {
       best = points.find((p) => p.start === first.start) ?? { start: first.start, end: first.end, text: stripBullet(first.text), score: 0, rank: points.length };
@@ -171,7 +177,7 @@ export function summarize(text: string, options: SummarizeOptions = {}): Summary
     if (second) tldr = second.start < best.start ? `${second.text} ${best.text}` : `${best.text} ${second.text}`;
   }
 
-  return { mode: 'prose', language, tldr: clip(tldr, 420), points, keywords, stats, ...(figures.length ? { figures } : {}) };
+  return { mode: 'prose', language, tldr: clip(tldr, 420), points, keywords, stats, ...(figures.length ? { figures } : {}), ...(clauses.length ? { clauses } : {}) };
 }
 
 /** "• Revenue grew…" → "Revenue grew…": list markers that PDFs keep in the text. */

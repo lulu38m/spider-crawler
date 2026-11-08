@@ -55,6 +55,10 @@ Summaries detect the document's language from its stopwords. Adding a language m
 
 Finance mode lives in [`src/summarize/finance.ts`](src/summarize/finance.ts). Each metric is a few lines in `METRICS`: its names in each language, its unit (money, percent, per share, multiple) and its rank. A metric your reports use is missing, or its name in your language? Add it, with a sentence from a (public or made-up) report in `tests/finance.test.ts`.
 
+### Clauses to read
+
+Terms mode lives in [`src/summarize/terms.ts`](src/summarize/terms.ts). Each kind of clause is a list of phrases per language in `CATEGORIES`. Wording your country's contracts use is missing? Add the phrase and a sentence using it in `tests/terms.test.ts`.
+
 ### A file format
 
 Every format is converted to blocks (headings, paragraphs, list items, code) and typeset by [`src/doc/layout.ts`](src/doc/layout.ts), or, for fixed layouts like PDF, to positioned words directly. See [`src/doc/load.ts`](src/doc/load.ts) for how formats are detected. EPUB and OpenDocument are wanted.

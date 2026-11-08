@@ -157,6 +157,29 @@ button {
   justify-content: center;
 }
 
+.sound-btn svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.sound-btn svg path:first-child {
+  fill: currentColor;
+}
+
+.sound-btn[aria-pressed='true'] .i-off,
+.sound-btn[aria-pressed='false'] .i-on {
+  display: none;
+}
+
+.sound-btn[aria-pressed='false'] {
+  color: var(--silk-muted, rgba(232, 236, 247, 0.6));
+}
+
 /* ── Buttons ───────────────────────────────────────────── */
 
 .btn {
@@ -601,6 +624,53 @@ button {
 .points code {
   font-family: var(--mono);
   font-size: 14px;
+}
+
+.clauses {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 10px;
+}
+
+.clauses li {
+  padding: 10px 12px 10px 14px;
+  border-radius: 10px;
+  background: #fff1f2;
+  border-left: 3px solid #e03131;
+}
+
+.clause-head {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.clause-head b {
+  color: #a51d2d;
+  font-size: 15px;
+}
+
+.clause-detail {
+  font-size: 13px;
+  font-weight: 700;
+  color: #e03131;
+}
+
+.clause-why {
+  margin: 2px 0 6px;
+  font-size: 13.5px;
+  color: var(--ink-soft);
+}
+
+.clauses blockquote {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.45;
+  font-style: italic;
 }
 
 .figures {

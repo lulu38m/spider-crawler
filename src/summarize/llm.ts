@@ -49,12 +49,15 @@ Reply with JSON only, nothing before or after it: {"tldr": string, "points": str
 - points: 3 to 6 short bullet points with the key ideas, facts or decisions.
 Write in the same language as the document. Do not invent facts.`;
 
+const TERMS = `
+This is a terms of service, privacy policy or contract. In the points, say plainly what the reader is agreeing to: renewal and commitment, how to cancel and what it costs, fees and price changes, refunds, what happens to their data, rights over their content, arbitration, liability. Quote durations and amounts exactly. Do not give legal advice.`;
+
 const FINANCE = `
 This is a financial report or analysis. Lead with the results: in the tldr and the points, give the headline figures (revenue, profit, margins, cash, guidance) with their exact values, changes and periods as stated in the document. Do not add opinions or investment advice.`;
 
-export async function aiSummarize(name: string, text: string, s: AiSettings, signal?: AbortSignal, financial = false): Promise<AiSummary> {
+export async function aiSummarize(name: string, text: string, s: AiSettings, signal?: AbortSignal, mode: 'finance' | 'terms' | null = null): Promise<AiSummary> {
   const body = text.length > MAX_CHARS ? `${text.slice(0, MAX_CHARS)}\n[…truncated]` : text;
-  const system = financial ? SYSTEM + FINANCE : SYSTEM;
+  const system = SYSTEM + (mode === 'finance' ? FINANCE : mode === 'terms' ? TERMS : '');
   const prompt = `Document title: ${name}\n\n<document>\n${body}\n</document>`;
   let reply = '';
   if (s.provider === 'anthropic') {

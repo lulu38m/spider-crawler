@@ -14,8 +14,15 @@ export class Recorder {
   }
 
   /** Prefer MP4 (what TikTok, Reels and Shorts want); fall back to WebM. */
-  private pickMime(): string {
+  private pickMime(audio: boolean): string {
+    const withAudio = [
+      'video/mp4;codecs=avc1.640028,mp4a.40.2',
+      'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
+      'video/webm;codecs=vp9,opus',
+      'video/webm;codecs=vp8,opus',
+    ];
     const candidates = [
+      ...(audio ? withAudio : []),
       'video/mp4;codecs=avc1.640028',
       'video/mp4;codecs=avc1.4d002a',
       'video/mp4;codecs=avc1.42E01E',
@@ -27,10 +34,12 @@ export class Recorder {
     return candidates.find((m) => MediaRecorder.isTypeSupported(m)) ?? '';
   }
 
-  start(canvas: HTMLCanvasElement, fps = 60): void {
+  /** `audio`: the spider's sounds, mixed into the video when given. */
+  start(canvas: HTMLCanvasElement, fps = 60, audio: MediaStreamTrack | null = null): void {
     if (this.recording) return;
     const stream = canvas.captureStream(fps);
-    this.mime = this.pickMime();
+    if (audio) stream.addTrack(audio);
+    this.mime = this.pickMime(!!audio);
     const pixels = canvas.width * canvas.height;
     const bitrate = Math.round(Math.min(24_000_000, Math.max(6_000_000, pixels * 6)));
     this.rec = new MediaRecorder(stream, this.mime ? { mimeType: this.mime, videoBitsPerSecond: bitrate } : { videoBitsPerSecond: bitrate });
@@ -53,7 +62,8 @@ export class Recorder {
         resolve({ blob, extension: type.includes('mp4') ? 'mp4' : 'webm' });
       };
       rec.stop();
-      rec.stream.getTracks().forEach((t) => t.stop());
+      // The audio track belongs to the sound engine and is reused by the next recording.
+      rec.stream.getVideoTracks().forEach((t) => t.stop());
     });
   }
 }

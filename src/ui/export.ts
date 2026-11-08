@@ -42,6 +42,11 @@ export function summaryMarkdown(name: string, s: Summary, source?: string): stri
   } else {
     out.push(`**TL;DR:** ${s.tldr}`, '');
   }
+  if (s.clauses?.length) {
+    out.push('## Clauses to read', '');
+    for (const c of s.clauses) out.push(`- **${c.label}**${c.detail ? ` (${c.detail})` : ''}: ${c.why}`);
+    out.push('', '_Spotted by their wording. Not legal advice: read the clauses themselves._', '');
+  }
   if (s.figures?.length) {
     out.push('## Key figures', '', '| | Value | Change | Period |', '| --- | --- | --- | --- |');
     for (const f of s.figures) out.push(`| ${f.label} | ${f.value} | ${f.change ?? ''} | ${f.period ?? ''} |`);
@@ -97,7 +102,7 @@ export async function shareCard(name: string, s: Summary, tldr: string): Promise
     ctx.moveTo(p.x, p.y - 10);
     ctx.lineTo(p.x, p.y);
     ctx.stroke();
-    drawCocoon(ctx, k.label, p, (i % 3 - 1) * 0.08, 1.05, 1, true, k.badge);
+    drawCocoon(ctx, k.label, p, (i % 3 - 1) * 0.08, 1.05, 1, true, k.badge, k.flag);
   });
   drawMiniSpider(ctx, { x: 250, y: 330 }, 9, 0.4);
 

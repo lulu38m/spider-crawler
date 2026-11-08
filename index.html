@@ -25,6 +25,10 @@
             <svg aria-hidden="true" viewBox="0 0 20 20"><path d="M10 2.5l1.6 4.3 4.4 1.6-4.4 1.6L10 14.3 8.4 10 4 8.4l4.4-1.6z" /><path d="M15.5 13l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7z" /></svg>
             <span>AI summary: <b id="ai-state">off</b></span>
           </button>
+          <button id="sound-btn" class="chip icon-only sound-btn" type="button" aria-pressed="true" aria-label="Sound on">
+            <svg class="i-on" aria-hidden="true" viewBox="0 0 20 20"><path d="M3.5 7.5h3l4-3.5v12l-4-3.5h-3z" /><path d="M13.5 7a4 4 0 010 6M15.8 5a7 7 0 010 10" /></svg>
+            <svg class="i-off" aria-hidden="true" viewBox="0 0 20 20"><path d="M3.5 7.5h3l4-3.5v12l-4-3.5h-3z" /><path d="M13.5 8l4 4M17.5 8l-4 4" /></svg>
+          </button>
           <a id="gh-link" class="chip icon-only" href="#" target="_blank" rel="noopener" aria-label="Source code on GitHub">
             <svg aria-hidden="true" viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z" /></svg>
           </a>
@@ -48,6 +52,7 @@
           <button class="link" type="button" data-sample="spider-silk.md">an article on spider silk</button>
           <button class="link" type="button" data-sample="arachnid-reading.pdf">a research paper (PDF)</button>
           <button class="link" type="button" data-sample="silkworks-q3-2026.pdf">an earnings report (PDF)</button>
+          <button class="link" type="button" data-sample="silkthread-terms.md">terms of service nobody reads</button>
           <button class="link" type="button" data-sample="code">the spider's own source code</button>
         </div>
         <p class="fine">PDF, Word, Markdown, HTML, text, code or a link. Your files never leave your browser.</p>
@@ -97,6 +102,11 @@
         </div>
         <h2 id="summary-title">The gist</h2>
         <p id="summary-tldr" class="tldr"></p>
+        <section id="summary-clauses-block" hidden>
+          <h3>Clauses to read</h3>
+          <ul id="summary-clauses" class="clauses"></ul>
+          <p class="figures-note">Spotted by their wording, not judged. Not legal advice: read the clause itself.</p>
+        </section>
         <section id="summary-figures-block" hidden>
           <h3>Key figures</h3>
           <dl id="summary-figures" class="figures"></dl>

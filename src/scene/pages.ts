@@ -271,9 +271,10 @@ export class PageRenderer {
       if (!any) {
         ctx.save();
         ctx.globalCompositeOperation = 'multiply';
-        ctx.fillStyle = PALETTE.highlighter;
         any = true;
       }
+      // Yellow for the summary, red for clauses to read.
+      ctx.fillStyle = h.tone === 'flag' ? PALETTE.flag : PALETTE.highlighter;
       // Marker strokes are a little uneven: slight tilt, rounded ends.
       const x0 = page.x + h.from - 2.5;
       const x1 = page.x + h.to + 2.5;

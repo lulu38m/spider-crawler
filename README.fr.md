@@ -28,10 +28,12 @@ C'est un jouet, mais honnête : tout ce que fait l'araignée à l'écran est la 
 - 🕷️ **Animation procédurale, zéro keyframe** : cinématique inverse à deux segments pour chacune des huit pattes, démarche tétrapode (quatre pattes levées, puis les quatre autres), sauts entre les pages, fil de sécurité. L'araignée est dessinée comme son propre squelette.
 - 📄 **Lit de vrais fichiers** : PDF (rendu fidèle via pdf.js), Word (.docx), Markdown, HTML, texte et plus de 40 langages de programmation.
 - 🔗 **Lit aussi les liens** : articles, PDF en ligne, README GitHub, pages Wikipédia.
+- 🚩 **Lit les CGU que personne ne lit** : conditions générales, politiques de confidentialité, contrats. L'araignée attrape en rouge les clauses à lire (reconduction tacite, engagement, résiliation, frais, remboursement, partage de données, droits sur vos contenus, arbitrage…).
 - 📈 **Lit les rapports financiers** : communiqués de résultats, rapports annuels, notes d'analyste. L'araignée attrape les chiffres clés (chiffre d'affaires, résultat net, marges, BPA…) avec leur variation et leur période.
 - 🔒 **Privé par défaut** : les fichiers sont lus dans ton navigateur. Pas d'envoi, pas de compte, pas de clé API.
 - ✨ **Résumé IA optionnel** avec ta propre clé : Claude ou toute API compatible OpenAI (OpenAI, Ollama, LM Studio, OpenRouter…).
-- 🎬 **Pensé pour la vidéo** : enregistreur intégré en 1920×1080, **1080×1920 pour TikTok, Reels et Shorts**, ou 1080×1080.
+- 🎬 **Pensé pour la vidéo** : enregistreur intégré en 1920×1080, **1080×1920 pour TikTok, Reels et Shorts**, ou 1080×1080, **avec le son**.
+- 🔊 **ASMR inclus** : petits pas sur le papier, fil de soie qui se déroule, « pop » quand un mot tombe, une note pour chaque mot-clé attrapé (ça joue une petite mélodie). Tout est synthétisé en direct, sans fichier audio. <kbd>M</kbd> coupe le son.
 - 🦾 **Six araignées** : Blueprint, Boxy, Hexa, Neon, Stilts et Sketch.
 - 🌍 **Six langues** pour les résumés : français, anglais, espagnol, allemand, italien, portugais.
 
@@ -67,6 +69,14 @@ Les navigateurs n'autorisent une page à lire un autre site que si ce site l'acc
 
 Les versions `npx`, Docker et zip embarquent un petit récupérateur local qui lit **n'importe quelle page publique**. Il ne sort que vers l'internet public (pas de `localhost` ni d'adresses du réseau local, vérifié à chaque redirection), s'arrête à 20 Mo et 15 secondes, et ne garde rien. Pour lire ton intranet, lance-le avec `--allow-private`.
 
+## CGU et contrats
+
+Quand un document ressemble à des CGU, une politique de confidentialité ou un contrat, l'araignée passe en mode CGU. Elle repère, à leur formulation, les clauses qu'on signe sans les lire : reconduction tacite, durée d'engagement, résiliation et préavis, frais et hausses de prix, absence de remboursement, partage et conservation des données, licence sur vos contenus, arbitrage et renonciation à l'action collective, responsabilité limitée, conditions modifiables à tout moment, fermeture du compte « à notre seule discrétion ».
+
+Chaque clause est **surlignée en rouge**, attrapée dans un **cocon rouge** avec son détail (`Résiliation 29 €`, `Engagement 12 mois`), et listée dans le résumé sous **Clauses to read** avec une explication et la citation. Pour essayer : les CGU de Silkthread Cloud, un service qui n'existe pas.
+
+L'araignée signale, elle ne juge pas : une clause signalée peut être tout à fait correcte. Ce n'est pas un avis juridique, c'est une raison de lire ce paragraphe.
+
 ## Rapports financiers
 
 Quand un document ressemble à un rapport financier, l'araignée passe en mode finance : elle repère les **chiffres clés** tels que le document les écrit (chiffre d'affaires, résultat net, résultat opérationnel, EBITDA, marges, BPA, free cash-flow, dette nette, dividende, objectif de cours…), avec leur **variation** (`+7,2%`, `−4%`, `+70 bps`) et leur **période** (`Q3 2026`, `H1 2026`, `FY 2025`). Elle les attrape comme des mots-clés (`CA €1 234,5m +7,2%` sur la toile), et le résumé affiche un tableau **Key figures**, aussi présent dans l'export Markdown.
@@ -77,7 +87,7 @@ Rien n'est calculé ni deviné : un chiffre n'apparaît que si le document le do
 
 Clique sur le logo en haut à gauche pour revenir à l'accueil.
 
-**Raccourcis** : <kbd>Espace</kbd> pause, <kbd>←</kbd> <kbd>→</kbd> vitesse, <kbd>S</kbd> araignée suivante, <kbd>R</kbd> enregistrer, <kbd>K</kbd> aller au résumé, <kbd>N</kbd> nouveau document.
+**Raccourcis** : <kbd>Espace</kbd> pause, <kbd>←</kbd> <kbd>→</kbd> vitesse, <kbd>S</kbd> araignée suivante, <kbd>R</kbd> enregistrer, <kbd>K</kbd> aller au résumé, <kbd>M</kbd> son, <kbd>N</kbd> nouveau document.
 
 ## Faire une vidéo
 
@@ -90,7 +100,7 @@ npx playwright-core install chromium   # une seule fois
 npm run demo:render -- --file ~/Documents/memoire.pdf --frame 9:16 --out ma-video.mp4
 ```
 
-Nécessite ffmpeg. Options : `--skin boxy`, `--speed 1.5`, `--frame 16:9|9:16|1:1`.
+Nécessite ffmpeg. Options : `--skin boxy`, `--speed 1.5`, `--frame 16:9|9:16|1:1`, `--mute`. La bande-son est calculée image par image : chaque pas tombe pile sur sa frame.
 
 ## Comment ça marche
 

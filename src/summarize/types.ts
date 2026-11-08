@@ -1,7 +1,8 @@
 import type { KeyFigure } from './finance';
+import type { Clause } from './terms';
 import type { Keyword } from './keywords';
 
-export type { KeyFigure, Keyword };
+export type { Clause, KeyFigure, Keyword };
 
 export interface SummarySentence {
   /** Char range in the source text. */
@@ -45,6 +46,8 @@ export interface Summary {
   code?: CodeFacts;
   /** Financial reports: headline figures as stated in the document (revenue, net income, margins…). */
   figures?: KeyFigure[];
+  /** Terms of service and contracts: clauses worth reading (renewal, fees, data sharing…). */
+  clauses?: Clause[];
   /** Filled in when an optional AI provider is configured. */
   ai?: AiSummary;
 }

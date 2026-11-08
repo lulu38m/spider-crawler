@@ -15,12 +15,13 @@
  *   --fps     frames per second                                (default 30)
  *   --out     output .mp4                                      (default docs/demo.mp4)
  *   --gif     also write a GIF (2× speed, 12 fps, 800 px wide) to this path
+ *   --mute    no soundtrack (by default the spider's sounds are mixed in)
  *
  * Needs ffmpeg on your PATH and a Chromium for Playwright:
  *   npx playwright-core install chromium      (or set CHROME_PATH to an existing Chrome)
  */
 import { spawn } from 'node:child_process';
-import { existsSync, mkdirSync, renameSync, rmSync, statSync } from 'node:fs';
+import { existsSync, mkdirSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright-core';
@@ -43,6 +44,7 @@ const intro = Number(opt('intro', '2.5'));
 const hold = Number(opt('hold', '2'));
 const out = resolve(root, opt('out', 'docs/demo.mp4'));
 const gif = argv.includes('--gif') ? resolve(root, opt('gif', 'docs/demo.gif')) : null;
+const mute = argv.includes('--mute');
 const SIZES = { '16:9': [1920, 1080], '9:16': [1080, 1920], '1:1': [1080, 1080] };
 if (!SIZES[frame]) throw new Error(`Unknown frame ${frame}. Use 16:9, 9:16 or 1:1.`);
 const [width, height] = SIZES[frame];
@@ -124,8 +126,21 @@ while (frames < maxFrames && !(await page.evaluate(() => window.__spider.settled
 await shoot(Math.round(hold * fps));
 ffmpeg.stdin.end();
 await encoder;
-renameSync(tmp, out);
-console.log(`\r  wrote ${out} (${(statSync(out).size / 1e6).toFixed(1)} MB, ${(frames / fps).toFixed(1)} s)`);
+
+// The soundtrack: every step, catch and pop, rendered offline on the video's clock.
+const soundtrack = mute ? null : await page.evaluate(() => window.__spider.audio());
+if (soundtrack) {
+  const wav = out.replace(/\.mp4$/, '.part.wav');
+  writeFileSync(wav, Buffer.from(soundtrack.slice(soundtrack.indexOf(',') + 1), 'base64'));
+  const muxed = out.replace(/\.mp4$/, '.mux.mp4');
+  await run('ffmpeg', ['-y', '-i', tmp, '-i', wav, '-c:v', 'copy', '-c:a', 'aac', '-b:a', '160k', '-shortest', '-movflags', '+faststart', muxed]);
+  rmSync(wav);
+  rmSync(tmp);
+  renameSync(muxed, out);
+} else {
+  renameSync(tmp, out);
+}
+console.log(`\r  wrote ${out} (${(statSync(out).size / 1e6).toFixed(1)} MB, ${(frames / fps).toFixed(1)} s${soundtrack ? ', with sound' : ''})`);
 
 await browser.close();
 await server.close();

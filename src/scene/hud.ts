@@ -10,8 +10,8 @@ export interface HudStats {
   wordsTotal: number;
   caught: number;
   keywords: number;
-  /** Financial reports: figures are caught too. */
-  figures?: boolean;
+  /** What gets caught: "keywords", "figures and keywords", "clauses and keywords". */
+  kinds?: string;
   progress: number;
 }
 
@@ -107,7 +107,7 @@ export class Hud {
     const lines = [
       s.pages > 1 ? `Page ${s.page + 1} of ${s.pages}` : 'One page',
       `${fmt.format(s.wordsRead)} of ${fmt.format(s.wordsTotal)} words`,
-      `${s.caught} of ${s.keywords} ${s.figures ? 'figures and keywords' : 'keywords'} caught`,
+      `${s.caught} of ${s.keywords} ${s.kinds ?? 'keywords'} caught`,
     ];
     ctx.save();
     ctx.globalAlpha = alpha;

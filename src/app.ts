@@ -5,11 +5,13 @@ import type { Doc } from './doc/types';
 import { fetchLink, parseLink } from './doc/url';
 import { Scene, type Phase } from './scene/scene';
 import { SKINS, skinById } from './spider/skins';
+import { clip } from './summarize';
 import { summarizeAsync } from './summarize/client';
 import { aiLabel, aiSummarize, DEFAULT_CLAUDE_MODEL, loadAiSettings, saveAiSettings, type AiSettings, type ProviderId } from './summarize/llm';
 import type { Summary } from './summarize/types';
 import { fileSafe, shareCard, summaryMarkdown } from './ui/export';
 import { download, Recorder } from './ui/recorder';
+import { SoundEngine } from './audio/sfx';
 
 type Frame = 'fill' | '16:9' | '9:16' | '1:1';
 const FRAMES: Record<Exclude<Frame, 'fill'>, [number, number]> = { '16:9': [1920, 1080], '9:16': [1080, 1920], '1:1': [1080, 1080] };
@@ -19,13 +21,14 @@ interface Prefs {
   skin: string;
   speed: number;
   frame: Frame;
+  sound: boolean;
 }
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
 function loadPrefs(): Prefs {
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const fallback: Prefs = { skin: 'blueprint', speed: reduced ? 2 : 1, frame: 'fill' };
+  const fallback: Prefs = { skin: 'blueprint', speed: reduced ? 2 : 1, frame: 'fill', sound: true };
   try {
     return { ...fallback, ...JSON.parse(localStorage.getItem('spider-crawler.prefs') ?? '{}') };
   } catch {
@@ -48,12 +51,17 @@ export function startApp(): void {
   const urlSpeed = Number(params.get('speed'));
   if (urlSpeed >= 0.25 && urlSpeed <= 4) prefs.speed = urlSpeed;
   if (params.get('frame') && (params.get('frame') === 'fill' || params.get('frame')! in FRAMES)) prefs.frame = params.get('frame') as Frame;
+  if (params.get('sound') === '0') prefs.sound = false;
 
   const app = $<HTMLElement>('app');
   const canvas = $<HTMLCanvasElement>('stage');
   const ctx = canvas.getContext('2d', { alpha: false })!;
   const measure = canvasMeasure();
   const recorder = new Recorder();
+  const sound = new SoundEngine();
+  sound.enabled = prefs.sound;
+  // Browsers only start audio after a click or a key press.
+  for (const type of ['pointerdown', 'keydown'] as const) window.addEventListener(type, () => sound.unlock(), { capture: true, passive: true });
   let ai: AiSettings = loadAiSettings();
   let current: { doc: Doc; summary: Summary } | null = null;
   let busy = false;
@@ -65,6 +73,7 @@ export function startApp(): void {
 
   const scene = new Scene(skinById(prefs.skin), {
     onPhase: (p) => onPhase(p),
+    onSound: (e) => sound.play(e),
     onFinaleSettled: () => {
       if (recorder.recording && autoStopRecording) window.setTimeout(() => void stopRecording(), 3000);
       else if (!recorder.recording) panelTimer = window.setTimeout(() => openSummary(), 900);
@@ -330,7 +339,7 @@ export function startApp(): void {
     const label = aiLabel(ai);
     setAiStatus(`Asking ${label}…`);
     try {
-      const res = await aiSummarize(doc.name, doc.text, ai, aiAbort.signal, !!summary.figures?.length);
+      const res = await aiSummarize(doc.name, doc.text, ai, aiAbort.signal, summary.clauses?.length ? 'terms' : summary.figures?.length ? 'finance' : null);
       if (current?.summary !== summary) return;
       summary.ai = res;
       scene.setAiTldr(res.tldr);
@@ -372,6 +381,31 @@ export function startApp(): void {
     } else if (!aiReady(ai)) {
       aiBlock.hidden = true;
     }
+    const clauses = summary.clauses ?? [];
+    $('summary-clauses-block').hidden = !clauses.length;
+    $('summary-clauses').replaceChildren(
+      ...clauses.map((c) => {
+        const li = document.createElement('li');
+        const head = document.createElement('p');
+        head.className = 'clause-head';
+        const label = document.createElement('b');
+        label.textContent = c.label;
+        head.append(label);
+        if (c.detail) {
+          const detail = document.createElement('span');
+          detail.className = 'clause-detail';
+          detail.textContent = c.detail;
+          head.append(detail);
+        }
+        const why = document.createElement('p');
+        why.className = 'clause-why';
+        why.textContent = c.why;
+        const quote = document.createElement('blockquote');
+        quote.textContent = clip(current!.doc.text.slice(c.sentence[0], c.sentence[1]).replace(/\s+/g, ' ').trim(), 260);
+        li.append(head, why, quote);
+        return li;
+      }),
+    );
     const figures = summary.figures ?? [];
     $('summary-figures-block').hidden = !figures.length;
     $('summary-figures').replaceChildren(
@@ -556,7 +590,7 @@ export function startApp(): void {
 
   function startRecording(auto: boolean) {
     try {
-      recorder.start(canvas, 60);
+      recorder.start(canvas, 60, sound.recordTrack());
     } catch (err) {
       toast(`Recording failed to start: ${err instanceof Error ? err.message : err}`, true);
       return;
@@ -753,6 +787,11 @@ export function startApp(): void {
       case 'K':
         scene.skip();
         break;
+      case 'm':
+      case 'M':
+        setSound(!prefs.sound);
+        toast(prefs.sound ? 'Sound on' : 'Sound off');
+        break;
       case 'n':
       case 'N':
         goHome();
@@ -767,6 +806,18 @@ export function startApp(): void {
 
   const gh = $<HTMLAnchorElement>('gh-link');
   gh.href = REPO_URL;
+
+  const soundBtn = $<HTMLButtonElement>('sound-btn');
+  function setSound(on: boolean) {
+    prefs.sound = on;
+    sound.enabled = on;
+    savePrefs(prefs);
+    soundBtn.setAttribute('aria-pressed', String(on));
+    soundBtn.setAttribute('aria-label', on ? 'Sound on' : 'Sound off');
+    soundBtn.title = on ? 'Sound on (M)' : 'Sound off (M)';
+  }
+  setSound(prefs.sound);
+  soundBtn.addEventListener('click', () => setSound(!prefs.sound));
 
   const toasts = $<HTMLElement>('toasts');
   function toast(message: string, error = false) {
@@ -795,6 +846,9 @@ export function startApp(): void {
   // Scripted, frame-perfect rendering (scripts/render-demo.mjs).
   if (capture) {
     const fps = Number(params.get('fps') ?? 30);
+    // Frame-perfect: sounds are logged on the video's clock, then rendered offline (audio()).
+    let frames = 0;
+    sound.timelineClock = () => frames / fps;
     const api = {
       get phase() {
         return scene.phase;
@@ -810,9 +864,26 @@ export function startApp(): void {
         await document.fonts.ready;
         await scene.preload();
       },
-      step(frames = 1) {
-        for (let i = 0; i < frames; i++) scene.update(1 / fps);
+      step(n = 1) {
+        for (let i = 0; i < n; i++) {
+          scene.update(1 / fps);
+          frames++;
+        }
         scene.render(ctx);
+      },
+      /** How many sounds of each kind were logged (for scripts and tests). */
+      get sounds() {
+        return sound.timeline.reduce<Record<string, number>>((n, { e }) => ((n[e.kind] = (n[e.kind] ?? 0) + 1), n), {});
+      },
+      /** The soundtrack of everything stepped so far, as a WAV data URL (or null if silent). */
+      async audio(): Promise<string | null> {
+        const blob = await sound.renderTimeline(frames / fps);
+        if (!blob) return null;
+        return new Promise((ok) => {
+          const reader = new FileReader();
+          reader.onload = () => ok(reader.result as string);
+          reader.readAsDataURL(blob);
+        });
       },
       frame(type = 'image/jpeg', quality = 0.92) {
         return canvas.toDataURL(type, quality);
