@@ -28,6 +28,7 @@ C'est un jouet, mais honnête : tout ce que fait l'araignée à l'écran est la 
 - 🕷️ **Animation procédurale, zéro keyframe** : cinématique inverse à deux segments pour chacune des huit pattes, démarche tétrapode (quatre pattes levées, puis les quatre autres), sauts entre les pages, fil de sécurité. L'araignée est dessinée comme son propre squelette.
 - 📄 **Lit de vrais fichiers** : PDF (rendu fidèle via pdf.js), Word (.docx), Markdown, HTML, texte et plus de 40 langages de programmation.
 - 🔗 **Lit aussi les liens** : articles, PDF en ligne, README GitHub, pages Wikipédia.
+- ❓ **Pose une question à l'araignée** (« quand ça se renouvelle ? », « quel est le chiffre d'affaires ? ») : elle court jusqu'au passage qui répond et le surligne en vert. Ça marche hors ligne ; avec une clé IA, la réponse est en plus reformulée.
 - 🚩 **Lit les CGU que personne ne lit** : conditions générales, politiques de confidentialité, contrats. L'araignée attrape en rouge les clauses à lire (reconduction tacite, engagement, résiliation, frais, remboursement, partage de données, droits sur vos contenus, arbitrage…).
 - 📈 **Lit les rapports financiers** : communiqués de résultats, rapports annuels, notes d'analyste. L'araignée attrape les chiffres clés (chiffre d'affaires, résultat net, marges, BPA…) avec leur variation et leur période.
 - 🔒 **Privé par défaut** : les fichiers sont lus dans ton navigateur. Pas d'envoi, pas de compte, pas de clé API.
@@ -69,6 +70,12 @@ Les navigateurs n'autorisent une page à lire un autre site que si ce site l'acc
 
 Les versions `npx`, Docker et zip embarquent un petit récupérateur local qui lit **n'importe quelle page publique**. Il ne sort que vers l'internet public (pas de `localhost` ni d'adresses du réseau local, vérifié à chaque redirection), s'arrête à 20 Mo et 15 secondes, et ne garde rien. Pour lire ton intranet, lance-le avec `--allow-private`.
 
+## Poser une question
+
+Une fois un document ouvert, tape ta question dans la barre au-dessus des contrôles (ou appuie sur <kbd>/</kbd>). L'araignée descend jusqu'au passage qui répond, le lit et le surligne en vert ; une carte affiche la question et la réponse, dessinée sur le canvas, donc visible dans tes vidéos. <kbd>Échap</kbd> ramène à la toile.
+
+La recherche se fait dans ton navigateur (BM25 sur les phrases, racines des mots, quelques synonymes français/anglais, bonus pour une date quand tu demandes « quand », un montant pour « combien »). Si rien ne correspond assez, elle le dit au lieu d'inventer. Avec une clé IA, seuls les passages trouvés sont envoyés avec la question, et la carte affiche une réponse courte.
+
 ## CGU et contrats
 
 Quand un document ressemble à des CGU, une politique de confidentialité ou un contrat, l'araignée passe en mode CGU. Elle repère, à leur formulation, les clauses qu'on signe sans les lire : reconduction tacite, durée d'engagement, résiliation et préavis, frais et hausses de prix, absence de remboursement, partage et conservation des données, licence sur vos contenus, arbitrage et renonciation à l'action collective, responsabilité limitée, conditions modifiables à tout moment, fermeture du compte « à notre seule discrétion ».
@@ -87,7 +94,7 @@ Rien n'est calculé ni deviné : un chiffre n'apparaît que si le document le do
 
 Clique sur le logo en haut à gauche pour revenir à l'accueil.
 
-**Raccourcis** : <kbd>Espace</kbd> pause, <kbd>←</kbd> <kbd>→</kbd> vitesse, <kbd>S</kbd> araignée suivante, <kbd>R</kbd> enregistrer, <kbd>K</kbd> aller au résumé, <kbd>M</kbd> son, <kbd>N</kbd> nouveau document.
+**Raccourcis** : <kbd>Espace</kbd> pause, <kbd>←</kbd> <kbd>→</kbd> vitesse, <kbd>S</kbd> araignée suivante, <kbd>R</kbd> enregistrer, <kbd>K</kbd> aller au résumé, <kbd>M</kbd> son, <kbd>/</kbd> poser une question, <kbd>N</kbd> nouveau document.
 
 ## Faire une vidéo
 

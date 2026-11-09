@@ -59,7 +59,23 @@ export async function aiSummarize(name: string, text: string, s: AiSettings, sig
   const body = text.length > MAX_CHARS ? `${text.slice(0, MAX_CHARS)}\n[…truncated]` : text;
   const system = SYSTEM + (mode === 'finance' ? FINANCE : mode === 'terms' ? TERMS : '');
   const prompt = `Document title: ${name}\n\n<document>\n${body}\n</document>`;
-  let reply = '';
+  const { text: reply, provider, model } = await complete(system, prompt, s, 4000, signal);
+  return parse(reply, provider, model);
+}
+
+const ANSWER = `You answer a reader's question about a document, using only the passages given.
+Answer in the language of the question, in one to three short sentences. Quote numbers, dates and amounts exactly.
+If the passages don't answer the question, say so in one sentence. No legal, financial or medical advice.`;
+
+/** A short answer to a question, from the passages the offline search found. */
+export async function aiAnswer(name: string, question: string, passages: string[], s: AiSettings, signal?: AbortSignal): Promise<{ text: string; provider: string; model: string }> {
+  const prompt = `Document title: ${name}\n\n${passages.map((p, i) => `<passage ${i + 1}>\n${p}\n</passage>`).join('\n')}\n\nQuestion: ${question}`;
+  const res = await complete(ANSWER, prompt, s, 400, signal);
+  return { ...res, text: res.text.trim() };
+}
+
+/** One request to the configured provider. */
+async function complete(system: string, prompt: string, s: AiSettings, maxTokens: number, signal?: AbortSignal): Promise<{ text: string; provider: string; model: string }> {
   if (s.provider === 'anthropic') {
     const model = s.model || DEFAULT_CLAUDE_MODEL;
     const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -72,12 +88,11 @@ export async function aiSummarize(name: string, text: string, s: AiSettings, sig
         // Required for calls made directly from a browser (bring-your-own-key apps).
         'anthropic-dangerous-direct-browser-access': 'true',
       },
-      body: JSON.stringify({ model, max_tokens: 4000, system, messages: [{ role: 'user', content: prompt }] }),
+      body: JSON.stringify({ model, max_tokens: maxTokens, system, messages: [{ role: 'user', content: prompt }] }),
     });
     if (!res.ok) throw new Error(await errorText(res, 'Claude'));
     const data = (await res.json()) as { content?: Array<{ type: string; text?: string }> };
-    reply = (data.content ?? []).filter((b) => b.type === 'text').map((b) => b.text ?? '').join('');
-    return parse(reply, 'Claude', model);
+    return { text: (data.content ?? []).filter((b) => b.type === 'text').map((b) => b.text ?? '').join(''), provider: 'Claude', model };
   }
   if (s.provider === 'openai') {
     const base = (s.baseUrl || DEFAULT_AI.baseUrl).replace(/\/+$/, '');
@@ -89,6 +104,7 @@ export async function aiSummarize(name: string, text: string, s: AiSettings, sig
       headers,
       body: JSON.stringify({
         model: s.model,
+        // No max_tokens here: some OpenAI-compatible models reject it (they want max_completion_tokens).
         temperature: 0.2,
         messages: [
           { role: 'system', content: system },
@@ -98,8 +114,7 @@ export async function aiSummarize(name: string, text: string, s: AiSettings, sig
     });
     if (!res.ok) throw new Error(await errorText(res, base));
     const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
-    reply = data.choices?.[0]?.message?.content ?? '';
-    return parse(reply, new URL(base).host, s.model);
+    return { text: data.choices?.[0]?.message?.content ?? '', provider: new URL(base).host, model: s.model };
   }
   throw new Error('No AI provider is configured.');
 }

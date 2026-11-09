@@ -59,6 +59,14 @@
         <input id="file-input" type="file" hidden />
       </section>
 
+      <form id="ask-form" class="ask-bar" role="search" aria-label="Ask the spider" hidden>
+        <svg aria-hidden="true" viewBox="0 0 20 20"><circle cx="10" cy="10" r="7.5" /><path d="M7.8 7.6a2.3 2.3 0 114 1.6c-.8.7-1.8 1.1-1.8 2.3" /><circle cx="10" cy="14.2" r=".5" /></svg>
+        <input id="ask-input" type="text" autocomplete="off" spellcheck="true" placeholder="Ask the spider: when does it renew? what's the revenue?" aria-label="Your question" />
+        <button class="ask-go" type="submit" aria-label="Ask">
+          <svg aria-hidden="true" viewBox="0 0 20 20"><path d="M4 10h11M11 5.5l4.5 4.5-4.5 4.5" /></svg>
+        </button>
+      </form>
+
       <nav id="controls" class="controls" aria-label="Playback" hidden>
         <button id="pause-btn" class="ctl" type="button" aria-pressed="false">
           <svg class="i-pause" aria-hidden="true" viewBox="0 0 20 20"><rect x="5" y="4" width="3.4" height="12" rx="1" /><rect x="11.6" y="4" width="3.4" height="12" rx="1" /></svg>
@@ -184,6 +192,7 @@
 
       <div id="rec-badge" class="rec-badge" hidden aria-hidden="true"><span class="dot"></span><span id="rec-time">0:00</span></div>
       <div id="toasts" class="toasts" role="status" aria-live="polite"></div>
+      <div id="sr-live" class="sr-only" aria-live="polite"></div>
       <div id="drop-hint" class="drop-hint" hidden>Drop to start crawling</div>
     </main>
     <script type="module" src="/src/main.ts"></script>

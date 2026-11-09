@@ -340,6 +340,76 @@ button {
 
 /* ── Playback controls ─────────────────────────────────── */
 
+.ask-bar {
+  position: absolute;
+  left: 50%;
+  bottom: calc(max(14px, env(safe-area-inset-bottom)) + 62px);
+  transform: translateX(-50%);
+  width: min(560px, calc(100vw - 24px));
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 5px 5px 14px;
+  border-radius: 14px;
+  background: var(--glass);
+  border: 1px solid var(--glass-line);
+  backdrop-filter: blur(10px);
+  z-index: 6;
+  color: var(--silk, #e8ecf7);
+  transition: opacity 0.4s;
+}
+
+.ask-bar:focus-within {
+  border-color: rgba(56, 217, 150, 0.7);
+  box-shadow: 0 0 0 3px rgba(56, 217, 150, 0.18);
+}
+
+.ask-bar > svg,
+.ask-go svg {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.ask-bar > svg {
+  color: #38d996;
+}
+
+.ask-bar input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 16px;
+}
+
+.ask-bar input::placeholder {
+  color: rgba(232, 236, 247, 0.55);
+}
+
+.ask-go {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 10px;
+  background: #38d996;
+  color: #0f1f42;
+}
+
+.ask-go:hover {
+  background: #5ce6ad;
+}
+
 .controls {
   position: absolute;
   left: 50%;
@@ -952,6 +1022,7 @@ button {
   transition: opacity 0.35s ease;
 }
 
+.ask-bar.dim:not(:focus-within),
 .controls.dim,
 .topbar.dim {
   opacity: 0;

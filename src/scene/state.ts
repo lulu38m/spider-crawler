@@ -11,8 +11,8 @@ export interface HighlightSeg {
   x1: number;
   top: number;
   bottom: number;
-  /** Red for clauses to read (terms mode); yellow otherwise. */
-  tone?: 'flag';
+  /** Red for clauses to read (terms mode), green for the answer to a question; yellow otherwise. */
+  tone?: 'flag' | 'answer';
   /** Covered so far (page-local x). from > to means nothing yet. */
   from: number;
   to: number;

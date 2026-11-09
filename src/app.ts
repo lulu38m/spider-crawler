@@ -6,8 +6,9 @@ import { fetchLink, parseLink } from './doc/url';
 import { Scene, type Phase } from './scene/scene';
 import { SKINS, skinById } from './spider/skins';
 import { clip } from './summarize';
+import { findAnswer } from './summarize/answer';
 import { summarizeAsync } from './summarize/client';
-import { aiLabel, aiSummarize, DEFAULT_CLAUDE_MODEL, loadAiSettings, saveAiSettings, type AiSettings, type ProviderId } from './summarize/llm';
+import { aiAnswer, aiLabel, aiSummarize, DEFAULT_CLAUDE_MODEL, loadAiSettings, saveAiSettings, type AiSettings, type ProviderId } from './summarize/llm';
 import type { Summary } from './summarize/types';
 import { fileSafe, shareCard, summaryMarkdown } from './ui/export';
 import { download, Recorder } from './ui/recorder';
@@ -189,18 +190,22 @@ export function startApp(): void {
   const skipBtn = $<HTMLButtonElement>('skip-btn');
   const summaryBtn = $<HTMLButtonElement>('summary-btn');
   const topbar = document.querySelector<HTMLElement>('.topbar')!;
+  const askForm = $<HTMLFormElement>('ask-form');
+  const askInput = $<HTMLInputElement>('ask-input');
 
   // While crawling, the controls and top bar fade out when the pointer rests, like a video player.
   let dimTimer = 0;
   function wake() {
     controls.classList.remove('dim');
     topbar.classList.remove('dim');
+    askForm.classList.remove('dim');
     window.clearTimeout(dimTimer);
     if (scene.phase !== 'crawl' && scene.phase !== 'leaving') return;
     dimTimer = window.setTimeout(() => {
       if (controls.matches(':hover, :focus-within')) return wake();
       controls.classList.add('dim');
       topbar.classList.add('dim');
+      if (document.activeElement !== askInput) askForm.classList.add('dim');
     }, 2600);
   }
   window.addEventListener('pointermove', wake);
@@ -212,17 +217,18 @@ export function startApp(): void {
     idlePanel.hidden = !idle;
     idlePanel.toggleAttribute('inert', p === 'loading');
     controls.hidden = idle && !recorder.recording;
-    skipBtn.hidden = p === 'finale';
-    summaryBtn.hidden = p !== 'finale';
+    skipBtn.hidden = p === 'finale' || p === 'ask';
+    summaryBtn.hidden = p !== 'finale' && p !== 'ask';
+    askForm.hidden = !(p === 'crawl' || p === 'finale' || p === 'ask');
     if (idle) {
       closeSummary();
       fitIdlePanel();
     }
     canvas.setAttribute(
       'aria-label',
-      p === 'crawl' ? `A spider crawling ${current?.doc.name ?? 'the document'}` : p === 'finale' ? 'The spider spinning its summary into a web' : 'A spider walking on a sheet of paper',
+      p === 'crawl' ? `A spider crawling ${current?.doc.name ?? 'the document'}` : p === 'finale' ? 'The spider spinning its summary into a web' : p === 'ask' ? 'The spider reading the passage that answers your question' : 'A spider walking on a sheet of paper',
     );
-    if (p === 'finale') announce('The spider finished reading. The summary is ready.');
+    if (p === 'finale' && !asking) announce('The spider finished reading. The summary is ready.');
     wake();
   }
 
@@ -328,6 +334,58 @@ export function startApp(): void {
       toast(`Couldn't open the file from the command line (${err instanceof Error ? err.message : err}).`, true);
     }
   }
+
+  // ── Ask the spider ──
+  let askAbort: AbortController | null = null;
+  /** True while a question sends a running crawl straight to its end (no "finished reading" toast). */
+  let asking = false;
+  /** For screen readers only: the answer is already on the canvas. */
+  const say = (message: string) => ($('sr-live').textContent = message);
+  askInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') askInput.blur();
+  });
+  // The ask bar sits above the controls: the answer card on the canvas sits above both.
+  scene.uiBottom = params.has('hideui') ? 0 : 140;
+
+  askForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const question = askInput.value.trim();
+    if (!question || !current) return;
+    const { doc, summary } = current;
+    const found = findAnswer(doc.text, question, summary.language);
+    const best = found.passages[0];
+    if (!best) {
+      toast("The spider looked everywhere but found nothing about that. Try other words, like the ones the document would use.", true);
+      return;
+    }
+    askInput.blur();
+    closeSummary();
+    window.clearTimeout(panelTimer);
+    asking = true;
+    const started = scene.ask(question, [best.start, best.end]);
+    asking = false;
+    if (!started) return;
+    const page = doc.pages.find((p) => p.lines.some((l) => l.start <= best.start && l.end > best.start));
+    const where = page && doc.pages.length > 1 ? `page ${page.index + 1}` : 'the document';
+    scene.setAskAnswer(best.text, `Found in ${where}${found.matched.length ? `, for: ${found.matched.slice(0, 4).join(', ')}` : ''}`);
+    say(`Found in ${where}: ${best.text}`);
+    // With an AI provider, a short answer in plain words (from the passages found, nothing else).
+    askAbort?.abort();
+    if (ai.provider === 'off' || (ai.provider === 'anthropic' && !ai.apiKey) || (ai.provider === 'openai' && !ai.model)) return;
+    askAbort = new AbortController();
+    const signal = askAbort.signal;
+    scene.setAskAnswer(best.text, `Found in ${where} · asking ${aiLabel(ai)}…`);
+    aiAnswer(doc.name, question, found.passages.slice(0, 4).map((p) => p.text), ai, signal)
+      .then((res) => {
+        if (signal.aborted || scene.askRun?.question !== question) return;
+        scene.setAskAnswer(res.text, `${res.provider} (${res.model}), from ${where}`);
+        say(res.text);
+      })
+      .catch((err) => {
+        if (signal.aborted) return;
+        scene.setAskAnswer(best.text, `Found in ${where} (AI answer unavailable: ${err instanceof Error ? err.message : err})`);
+      });
+  });
 
   // ── AI summary (optional) ─────────────────────────────────────────────
 
@@ -797,7 +855,18 @@ export function startApp(): void {
         goHome();
         break;
       case 'Escape':
-        closeSummary();
+        if (!summaryEl.hidden || scene.phase !== 'ask') closeSummary();
+        else {
+          asking = true; // back to the web it already finished: no "finished reading" toast
+          scene.leaveAsk();
+          asking = false;
+        }
+        break;
+      case '/':
+        if (!askForm.hidden) {
+          e.preventDefault();
+          askInput.focus();
+        }
         break;
     }
   });
@@ -870,6 +939,11 @@ export function startApp(): void {
           frames++;
         }
         scene.render(ctx);
+      },
+      /** Asks the spider a question, like typing it in the ask bar. */
+      ask(question: string) {
+        askInput.value = question;
+        askForm.requestSubmit();
       },
       /** How many sounds of each kind were logged (for scripts and tests). */
       get sounds() {

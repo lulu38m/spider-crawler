@@ -20,6 +20,8 @@ export const PALETTE = {
   highlighter: 'rgba(255, 204, 41, 0.6)',
   /** Clauses to read (terms mode). */
   flag: 'rgba(255, 99, 112, 0.42)',
+  /** The answer to "Ask the spider". */
+  answer: 'rgba(56, 217, 150, 0.45)',
   dew: '#ffffff',
   hudText: 'rgba(232, 236, 247, 0.86)',
   hudMuted: 'rgba(232, 236, 247, 0.55)',

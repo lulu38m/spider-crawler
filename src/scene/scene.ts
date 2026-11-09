@@ -4,6 +4,8 @@ import type { Doc } from '../doc/types';
 import { DEFAULT_DRAW, drawSpider } from '../spider/draw';
 import type { Skin } from '../spider/skins';
 import { Spider, type SpiderMode } from '../spider/spider';
+import { AskRun } from './ask';
+import { drawAskCard } from './askCard';
 import type { SoundEvent } from '../audio/sfx';
 import type { Summary } from '../summarize/types';
 import { clip } from '../summarize';
@@ -19,7 +21,7 @@ import { Dragline } from './trail';
 import { FallingWords } from './fallingWords';
 import { hashString } from '../core/rng';
 
-export type Phase = 'idle' | 'loading' | 'leaving' | 'crawl' | 'finale';
+export type Phase = 'idle' | 'loading' | 'leaving' | 'crawl' | 'finale' | 'ask';
 
 export interface SceneCallbacks {
   onPhase?(phase: Phase): void;
@@ -71,6 +73,10 @@ export class Scene {
   pages: PageRenderer | null = null;
   director: Director | null = null;
   finale: Finale | null = null;
+  /** Screen px the page's own controls cover at the bottom (the answer card stays above them). */
+  uiBottom = 0;
+  /** "Ask the spider": the passage it is walking to and reading. */
+  askRun: AskRun | null = null;
   idleText: IdleText = DEFAULT_IDLE;
   aiTldr: string | null = null;
   /** Wall-clock seconds spent crawling (for the stats line). */
@@ -157,6 +163,7 @@ export class Scene {
     this.summary = null;
     this.pages = null;
     this.director = null;
+    this.askRun = null;
     this.finale = null;
     this.finaleSlots = null;
     this.pending = null;
@@ -272,6 +279,44 @@ export class Scene {
     this.camera.zoomSmoothTime = 0.9;
     this.camera.set(c.x, c.y, c.zoom);
     this.finaleContent = this.buildFinaleContent();
+  }
+
+  /**
+   * Sends the spider to the passage answering `question` (char range in the document).
+   * Works once a document is loaded; a running crawl jumps to its end first.
+   */
+  ask(question: string, range: [number, number]): boolean {
+    if (!this.doc || !this.director || !this.pages) return false;
+    if (this.phase === 'crawl') this.skip();
+    if (this.phase !== 'finale' && this.phase !== 'ask') return false;
+    const previous = this.askRun;
+    const run = new AskRun(this.doc, range, question, this.time);
+    const sameView = this.phase === 'ask' && !!previous && previous.page === run.page;
+    this.askRun = run;
+    this.spider.face = null;
+    this.spider.speedLimit = 900;
+    run.begin(this.spider, sameView);
+    if (!sameView) {
+      // Frame the page right away, the way a crawl starts.
+      const page = this.doc.pages[run.page];
+      const z = this.crawlZoom();
+      this.camera.set(page.x + page.width / 2, run.target.y + (this.h * 0.12) / z, z);
+      this.camera.snap();
+    }
+    this.setPhase('ask');
+    return true;
+  }
+
+  setAskAnswer(text: string, source: string): void {
+    if (this.askRun) this.askRun.answer = { text, source };
+  }
+
+  /** From an answer back to the web and its summary. */
+  leaveAsk(): void {
+    if (this.phase !== 'ask' || !this.finale) return;
+    this.askRun = null;
+    this.spider.place(this.finale.hub, Math.PI / 2);
+    this.enterFinale();
   }
 
   setAiTldr(text: string): void {
@@ -441,16 +486,28 @@ export class Scene {
         }
         break;
       }
+      case 'ask': {
+        const run = this.askRun!;
+        const wasDone = run.done;
+        run.update(dt, this.spider);
+        if (run.done && !wasDone) this.sound({ kind: 'catch', index: 4, accent: 'figure' }, this.spider.pos);
+        this.spider.update(dt);
+        this.falling?.update(dt, now);
+        // Cocoons shrink back to the corner web.
+        for (const cc of this.cocoons.items) cc.big = Math.max(0, (cc.big ?? 0) - dt * 2);
+        this.updateCrawlCamera(run.page);
+        break;
+      }
     }
     this.cocoons.update(dt, now, (p) => this.camera.toScreen(p, this.w, this.h), this.slotProvider());
     this.camera.update(dt);
   }
 
-  private updateCrawlCamera(): void {
+  private updateCrawlCamera(pageIndex = this.director!.page): void {
     const doc = this.doc!;
     const z = this.crawlZoom();
     const sp = this.spider;
-    const page = doc.pages[this.director!.page] ?? doc.pages[0];
+    const page = doc.pages[pageIndex] ?? doc.pages[0];
     let tx = page.x + page.width / 2;
     const visW = this.w / z;
     if (page.width + 60 > visW) {
@@ -469,7 +526,7 @@ export class Scene {
     }
     // Don't drift above the current page while reading it.
     const minY = page.y + this.h / 2 / tz - 60;
-    if (sp.mode !== 'rappel' || this.director!.page === this.director!.crawled[0]) ty = Math.max(ty, minY);
+    if (sp.mode !== 'rappel' || pageIndex === this.director!.crawled[0]) ty = Math.max(ty, minY);
     this.camera.smoothTime = smooth;
     this.camera.zoomSmoothTime = 0.9;
     this.camera.set(tx, ty, tz);
@@ -488,9 +545,14 @@ export class Scene {
     if (this.isIdle || this.phase === 'leaving') {
       this.idle.draw(ctx, now, this.idleText, zoom, dpr, this.cardAlpha);
     }
-    if (this.pages && this.director && (this.phase === 'crawl' || this.phase === 'finale')) {
+    if (this.pages && this.director && (this.phase === 'crawl' || this.phase === 'finale' || this.phase === 'ask')) {
       const view = camera.view(w, h, 60);
-      this.pages.draw(ctx, view, zoom, dpr, now, this.director.highlights, this.director.catches, this.falling?.holes(now) ?? []);
+      // The answer replaces the yellow or red marks under it: mixed colors would read as neither.
+      const ask = this.phase === 'ask' ? this.askRun : null;
+      const highlights = ask
+        ? [...this.director.highlights.filter((hl) => !ask.segs.some((a) => a.page === hl.page && a.line === hl.line && hl.x0 < a.x1 && hl.x1 > a.x0)), ...ask.segs]
+        : this.director.highlights;
+      this.pages.draw(ctx, view, zoom, dpr, now, highlights, this.director.catches, this.falling?.holes(now) ?? []);
       if (this.phase === 'crawl') this.dragline.draw(ctx, this.spider, now, zoom);
       this.falling?.draw(ctx, now, zoom * dpr);
     }
@@ -512,13 +574,17 @@ export class Scene {
 
     // Screen-space overlay.
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    const crawling = this.phase === 'crawl' || this.phase === 'finale';
+    const crawling = this.phase === 'crawl' || this.phase === 'finale' || this.phase === 'ask';
     const subtitle = crawling && this.doc ? this.doc.name : 'A literal web crawler';
     const finaleT = this.finale && this.phase === 'finale' ? this.finale.elapsed(now) : 0;
     const hudAlpha = this.phase === 'finale' ? clamp(1 - (finaleT - 1.5) / 1.2, 0, 1) : 1;
     if (crawling) this.hud.drawBands(ctx, this.phase === 'finale' ? clamp(1 - finaleT / 1.5, 0, 1) : 1);
     this.hud.drawWordmark(ctx, now, subtitle);
-    if (crawling && this.director) {
+    if (this.phase === 'ask' && this.director) {
+      this.hud.drawWeb(ctx, now, 1);
+      this.cocoons.draw(ctx, this.slotProvider());
+      if (this.askRun) drawAskCard(ctx, w, h, this.hud.unit, this.askRun, now, this.uiBottom);
+    } else if (crawling && this.director) {
       this.hud.drawWeb(ctx, now, hudAlpha);
       this.hud.drawStats(
         ctx,

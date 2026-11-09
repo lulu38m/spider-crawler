@@ -38,6 +38,7 @@ It's a toy, but an honest one: everything the spider does on screen is the real 
 - 🕷️ **Procedural animation, zero keyframes.** Two-bone inverse kinematics for each of the eight legs, a tetrapod gait (four legs up, then the other four), jumps between pages, a dragline behind it. The spider is drawn as its own rig, so you see how it works.
 - 📄 **Reads real files.** PDFs keep their real look (rendered by pdf.js, with the spider walking on the actual words), plus Word (.docx), Markdown, HTML, plain text and 40+ programming languages.
 - 🔗 **Crawls links too.** Paste a URL: articles, PDFs online, GitHub READMEs, Wikipedia pages.
+- ❓ **Ask the spider.** Type a question ("when does it renew?", "what's the revenue?") and the spider runs to the passage that answers it and highlights it in green. Works offline; with an AI key, you also get the answer in plain words.
 - 🚩 **Reads the terms nobody reads.** Terms of service, privacy policies and contracts get a terms mode: the spider catches the clauses worth reading in red (automatic renewal, commitment, cancellation, fees, refunds, data sharing, rights over your content, arbitration…).
 - 📈 **Reads financial reports.** Earnings releases, annual reports and analyst notes get a finance mode: the spider catches the headline figures (revenue, net income, margins, EPS…) with their change and period.
 - 🔒 **Private by default.** Files are read in your browser: no upload, no account, no API key. Works offline once loaded.
@@ -112,6 +113,14 @@ It reads English and French reports best (`$412.6 million`, `1 234,5 M€`, `en 
 
 Nothing is computed or guessed: a figure only appears if the document says it, and the app gives no opinion or advice.
 
+## Ask the spider
+
+Once a document is open, type a question in the bar above the controls (or press <kbd>/</kbd>). The spider rappels down to the passage that answers it, reads it, and highlights it in green; a card shows your question and the answer, on the canvas, so it's in your recordings too. <kbd>Esc</kbd> takes you back to the web.
+
+The search runs in your browser: BM25 over the document's sentences, light stemming, a small English/French list of synonyms ("cancel" finds "résiliation", "price" finds "fee"), and a bonus for sentences holding what you asked for (a date for "when", an amount for "how much"). When nothing matches well enough, it says so instead of guessing.
+
+With an AI provider set, the passages it found (and only those) are sent with your question, and the card shows a short answer in plain words.
+
 ## Terms and contracts
 
 When a document reads like terms of service, a privacy policy or a contract, the spider switches to terms mode. It looks for the clauses people sign without reading, by their wording, in English and French:
@@ -144,8 +153,9 @@ Click the logo in the top left to come back to the start at any time.
 | <kbd>R</kbd> | Start / stop recording |
 | <kbd>K</kbd> | Skip to the summary |
 | <kbd>M</kbd> | Sound on / off |
+| <kbd>/</kbd> | Ask the spider a question |
 | <kbd>N</kbd> | New document |
-| <kbd>Esc</kbd> | Close the summary |
+| <kbd>Esc</kbd> | Close the summary, or leave an answer |
 
 You can also paste text, a file or a link anywhere on the landing page.
 
