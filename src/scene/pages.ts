@@ -252,7 +252,7 @@ export class PageRenderer {
       ctx.drawImage(bitmap, page.x, page.y, page.width, page.height);
       return;
     }
-    if (this.doc.kind !== 'pdf') {
+    if (this.doc.kind !== 'pdf' && this.doc.kind !== 'image') {
       this.drawTypeset(ctx, page, view);
       return;
     }

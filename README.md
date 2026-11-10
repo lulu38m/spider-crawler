@@ -37,6 +37,7 @@ It's a toy, but an honest one: everything the spider does on screen is the real 
 
 - 🕷️ **Procedural animation, zero keyframes.** Two-bone inverse kinematics for each of the eight legs, a tetrapod gait (four legs up, then the other four), jumps between pages, a dragline behind it. The spider is drawn as its own rig, so you see how it works.
 - 📄 **Reads real files.** PDFs keep their real look (rendered by pdf.js, with the spider walking on the actual words), plus Word (.docx), Markdown, HTML, plain text and 40+ programming languages.
+- 📸 **Reads photos and scans.** Snap a letter, paste a screenshot or drop a scanned PDF: OCR runs in your browser and the spider walks on your picture.
 - 🔗 **Crawls links too.** Paste a URL: articles, PDFs online, GitHub READMEs, Wikipedia pages.
 - ❓ **Ask the spider.** Type a question ("when does it renew?", "what's the revenue?") and the spider runs to the passage that answers it and highlights it in green. Works offline; with an AI key, you also get the answer in plain words.
 - 🚩 **Reads the terms nobody reads.** Terms of service, privacy policies and contracts get a terms mode: the spider catches the clauses worth reading in red (automatic renewal, commitment, cancellation, fees, refunds, data sharing, rights over your content, arbitration…).
@@ -112,6 +113,14 @@ When a document reads like a financial report (earnings release, annual or half-
 It reads English and French reports best (`$412.6 million`, `1 234,5 M€`, `en hausse de 7,2 %`), with the main metric names in Spanish, German, Italian and Portuguese too. Try it with the sample: an earnings report from Orbweaver Silkworks, a company that doesn't exist.
 
 Nothing is computed or guessed: a figure only appears if the document says it, and the app gives no opinion or advice.
+
+## Photos, screenshots and scans
+
+Take a photo of a letter, paste a screenshot (<kbd>⌘</kbd>/<kbd>Ctrl</kbd>+<kbd>V</kbd> on the landing page), or drop a scanned PDF: the spider reads it with OCR and walks on **your picture itself**, highlighting the actual words. Finance and terms modes work on photos too, so a photographed contract gets its red flags.
+
+OCR is [Tesseract](https://github.com/tesseract-ocr/tesseract) compiled to WebAssembly ([tesseract.js](https://github.com/naptha/tesseract.js)), in English and French. It runs in your browser like everything else: the engine and the language models (about 15 MB) are served by this app, not a CDN, downloaded the first time you open a picture and then cached. A page takes a few seconds; scanned PDFs are read up to 40 pages.
+
+For best results: a sharp photo, taken straight on, in good light.
 
 ## Ask the spider
 
@@ -220,7 +229,8 @@ The key is stored in your browser's local storage and sent only to the provider 
 
 | Format | Notes |
 | --- | --- |
-| PDF | Rendered with pdf.js; the spider walks on the real text layer. Scanned PDFs have no text yet (OCR is on the roadmap). |
+| PDF | Rendered with pdf.js; the spider walks on the real text layer. Scanned pages are read with OCR. |
+| Photos and screenshots | PNG, JPEG, WebP, GIF, BMP, AVIF (and HEIC in Safari), read with OCR. The page is your picture. |
 | Word (.docx) | Converted with mammoth. Old .doc files: save as .docx first. |
 | Markdown, text | Headings, lists, quotes and code blocks are typeset. |
 | HTML and links | Cleaned up with Mozilla's Readability, like reader mode. |
@@ -258,7 +268,6 @@ About 7,000 lines of TypeScript, no UI framework, no runtime dependencies for th
 
 ## Roadmap
 
-- OCR for scanned PDFs and images (tesseract.js)
 - EPUB and OpenDocument
 - More summary languages (stopword lists are tiny, see `src/summarize/stopwords.ts`)
 - `npx @lulu38m/spider-crawler file.pdf --video` to render a video in one line

@@ -28,11 +28,19 @@ const UNSUPPORTED: Record<string, string> = {
   xlsx: 'Spreadsheets are not supported. The spider reads prose and code.',
   xls: 'Spreadsheets are not supported. The spider reads prose and code.',
   zip: 'Archives are not supported. Drop a single document.',
+  tiff: 'TIFF images are not supported. Export it as PNG, JPEG or PDF.',
+  tif: 'TIFF images are not supported. Export it as PNG, JPEG or PDF.',
+  svg: 'SVG drawings are not supported. Export it as PNG.',
 };
 
-const IMAGE_EXT = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'heic', 'avif', 'bmp', 'tiff', 'svg']);
+/** Photos and screenshots are read with OCR. */
+export const IMAGE_EXT = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'heic', 'heif', 'avif', 'bmp']);
 
-export const ACCEPT = '.pdf,.docx,.md,.markdown,.mdx,.txt,.text,.html,.htm,.csv,.log,.rst,.tex,' + [...CODE_EXTENSIONS].map((e) => `.${e}`).join(',');
+export const ACCEPT =
+  '.pdf,.docx,.md,.markdown,.mdx,.txt,.text,.html,.htm,.csv,.log,.rst,.tex,' +
+  [...IMAGE_EXT].map((e) => `.${e}`).join(',') +
+  ',image/*,' +
+  [...CODE_EXTENSIONS].map((e) => `.${e}`).join(',');
 
 export function extensionOf(name: string): string {
   const m = name.toLowerCase().match(/\.([a-z0-9]+)$/);
@@ -63,12 +71,19 @@ async function ensureFonts(css: string[]): Promise<void> {
 export async function loadDocument(input: LoadInput, measure: Measure, progress?: Progress): Promise<Doc> {
   const ext = input.ext ?? extensionOf(input.name);
   if (UNSUPPORTED[ext]) throw new UnsupportedFileError(UNSUPPORTED[ext]);
-  if (IMAGE_EXT.has(ext)) throw new UnsupportedFileError('Images are not supported yet: the spider needs text to read. Reading scans (OCR) is on the roadmap.');
+  const image = typeof input.data !== 'string' ? (IMAGE_EXT.has(ext) ? ext : sniffImage(input.data)) : null;
+  if (image && typeof input.data !== 'string') {
+    const { parseImage } = await import('./ocr');
+    const doc = await parseImage(input.data, input.name, image, progress);
+    return { ...doc, source: input.source };
+  }
 
   if (typeof input.data !== 'string' && bytesStartWith(input.data, [0x25, 0x50, 0x44, 0x46])) {
     progress?.('Unrolling the PDF…', 0);
     const { parsePdf } = await import('./pdf');
-    const doc = await parsePdf(input.data, input.name, measure, (done, total) => progress?.(`Unrolling page ${done} of ${total}…`, done / total));
+    const doc = await parsePdf(input.data, input.name, measure, (done, total, ocr) =>
+      progress?.(ocr ? `Reading scanned page ${done} of ${total}…` : `Unrolling page ${done} of ${total}…`, done / total),
+    );
     return { ...doc, source: input.source };
   }
 
@@ -116,6 +131,16 @@ export async function loadDocument(input: LoadInput, measure: Measure, progress?
     warnings: [],
     source: input.source,
   };
+}
+
+/** Images that come without a usable name (pasted from the clipboard, linked from the web). */
+function sniffImage(buf: ArrayBuffer): string | null {
+  if (bytesStartWith(buf, [0x89, 0x50, 0x4e, 0x47])) return 'png';
+  if (bytesStartWith(buf, [0xff, 0xd8, 0xff])) return 'jpg';
+  if (bytesStartWith(buf, [0x47, 0x49, 0x46, 0x38])) return 'gif';
+  const head = new Uint8Array(buf, 0, Math.min(12, buf.byteLength));
+  if (head.length === 12 && String.fromCharCode(...head.slice(0, 4)) === 'RIFF' && String.fromCharCode(...head.slice(8, 12)) === 'WEBP') return 'webp';
+  return null;
 }
 
 function looksLikeMarkdown(text: string): boolean {

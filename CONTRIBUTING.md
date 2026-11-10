@@ -59,6 +59,10 @@ Finance mode lives in [`src/summarize/finance.ts`](src/summarize/finance.ts). Ea
 
 Terms mode lives in [`src/summarize/terms.ts`](src/summarize/terms.ts). Each kind of clause is a list of phrases per language in `CATEGORIES`. Wording your country's contracts use is missing? Add the phrase and a sentence using it in `tests/terms.test.ts`.
 
+### An OCR language
+
+OCR reads English and French. Another language is one line in `OCR_FILES` in [`vite.config.ts`](vite.config.ts) (its model from the `@tesseract.js-data/<lang>` package, `4.0.0_best_int`) and its code in `createWorker` in [`src/doc/ocr.ts`](src/doc/ocr.ts). Mind the download size: each model is loaded the first time someone opens a picture.
+
 ### A file format
 
 Every format is converted to blocks (headings, paragraphs, list items, code) and typeset by [`src/doc/layout.ts`](src/doc/layout.ts), or, for fixed layouts like PDF, to positioned words directly. See [`src/doc/load.ts`](src/doc/load.ts) for how formats are detected. EPUB and OpenDocument are wanted.

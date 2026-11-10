@@ -27,6 +27,7 @@ C'est un jouet, mais honnête : tout ce que fait l'araignée à l'écran est la 
 
 - 🕷️ **Animation procédurale, zéro keyframe** : cinématique inverse à deux segments pour chacune des huit pattes, démarche tétrapode (quatre pattes levées, puis les quatre autres), sauts entre les pages, fil de sécurité. L'araignée est dessinée comme son propre squelette.
 - 📄 **Lit de vrais fichiers** : PDF (rendu fidèle via pdf.js), Word (.docx), Markdown, HTML, texte et plus de 40 langages de programmation.
+- 📸 **Lit les photos et les scans** : photographie un courrier, colle une capture d'écran ou dépose un PDF scanné ; l'OCR tourne dans ton navigateur et l'araignée marche sur ta photo.
 - 🔗 **Lit aussi les liens** : articles, PDF en ligne, README GitHub, pages Wikipédia.
 - ❓ **Pose une question à l'araignée** (« quand ça se renouvelle ? », « quel est le chiffre d'affaires ? ») : elle court jusqu'au passage qui répond et le surligne en vert. Ça marche hors ligne ; avec une clé IA, la réponse est en plus reformulée.
 - 🚩 **Lit les CGU que personne ne lit** : conditions générales, politiques de confidentialité, contrats. L'araignée attrape en rouge les clauses à lire (reconduction tacite, engagement, résiliation, frais, remboursement, partage de données, droits sur vos contenus, arbitrage…).
@@ -69,6 +70,12 @@ Colle un lien dans le champ de l'écran d'accueil, n'importe où sur la page, gl
 Les navigateurs n'autorisent une page à lire un autre site que si ce site l'accepte (CORS). La version en ligne lit donc ce qui lui est ouvert : fichiers et README GitHub, articles Wikipédia (via leurs API publiques), et les nombreux sites et PDF qui l'autorisent. Sinon, elle le dit clairement.
 
 Les versions `npx`, Docker et zip embarquent un petit récupérateur local qui lit **n'importe quelle page publique**. Il ne sort que vers l'internet public (pas de `localhost` ni d'adresses du réseau local, vérifié à chaque redirection), s'arrête à 20 Mo et 15 secondes, et ne garde rien. Pour lire ton intranet, lance-le avec `--allow-private`.
+
+## Photos, captures d'écran et scans
+
+Prends en photo un courrier, colle une capture d'écran (<kbd>⌘</kbd>/<kbd>Ctrl</kbd>+<kbd>V</kbd> sur l'accueil) ou dépose un PDF scanné : l'araignée le lit par OCR et marche **sur ta photo elle-même**, en surlignant les vrais mots. Les modes finance et CGU marchent aussi sur les photos : un contrat photographié a ses clauses en rouge.
+
+L'OCR, c'est [Tesseract](https://github.com/tesseract-ocr/tesseract) compilé en WebAssembly, en anglais et en français, dans ton navigateur. Le moteur et les modèles de langue (environ 15 Mo) sont servis par l'app elle-même, pas par un CDN, téléchargés à la première photo puis gardés en cache. Quelques secondes par page ; les PDF scannés sont lus jusqu'à 40 pages.
 
 ## Poser une question
 

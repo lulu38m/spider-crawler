@@ -1,11 +1,14 @@
 import * as pdfjs from 'pdfjs-dist';
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import { PAGE_WIDTH } from './layout';
+import { UnsupportedFileError } from './load';
 import type { Doc, Line, Measure, Page, Word } from './types';
 
 pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
 
 const MAX_PAGES = 400;
+/** Scanned pages are read with OCR, a few seconds each: past this many, the rest is skipped. */
+const MAX_OCR_PAGES = 40;
 
 interface Run {
   str: string;
@@ -32,7 +35,7 @@ interface RawLine {
  * Real PDFs keep their real look: pages are rasterized by pdf.js, and the text layer gives each
  * word's position so the spider walks on the actual words.
  */
-export async function parsePdf(data: ArrayBuffer, name: string, measure: Measure, onProgress?: (done: number, total: number) => void): Promise<Doc> {
+export async function parsePdf(data: ArrayBuffer, name: string, measure: Measure, onProgress?: (done: number, total: number, ocr?: boolean) => void): Promise<Doc> {
   const task = pdfjs.getDocument({ data: new Uint8Array(data) });
   const pdf = await task.promise;
   const total = Math.min(pdf.numPages, MAX_PAGES);
@@ -41,6 +44,8 @@ export async function parsePdf(data: ArrayBuffer, name: string, measure: Measure
 
   const pages: Page[] = [];
   const allLines: Array<{ page: Page; raw: RawLine; line: Line }> = [];
+  let ocrPages = 0;
+  let ocrSkipped = 0;
 
   for (let i = 1; i <= total; i++) {
     const pdfPage = await pdf.getPage(i);
@@ -77,7 +82,17 @@ export async function parsePdf(data: ArrayBuffer, name: string, measure: Measure
       },
     };
 
-    for (const raw of groupLines(runs, measure)) {
+    // A page without a text layer is a scan (or a photo saved as PDF): read it with OCR.
+    let rawLines = groupLines(runs, measure);
+    if (rawLines.reduce((n, l) => n + l.words.length, 0) < 3) {
+      if (ocrPages < MAX_OCR_PAGES) {
+        ocrPages++;
+        onProgress?.(i, total, true);
+        rawLines = await ocrPage(page);
+      } else ocrSkipped++;
+    }
+
+    for (const raw of rawLines) {
       const words = raw.words;
       const line: Line = {
         page: page.index,
@@ -135,9 +150,9 @@ export async function parsePdf(data: ArrayBuffer, name: string, measure: Measure
     if (raw.size > bodySize * 1.28 && raw.words.length < 16) headings.push([line.start, line.end]);
   }
 
-  if (text.replace(/\s/g, '').length < 40 * total) {
-    warnings.push('This PDF has little or no selectable text. It may be a scan; the spider can only read text layers for now.');
-  }
+  if (ocrPages) warnings.push(`${ocrPages === total ? 'This PDF is a scan: it was' : `${ocrPages} scanned page${ocrPages > 1 ? 's were' : ' was'}`} read with OCR, so a few words may be misread.`);
+  if (ocrSkipped) warnings.push(`${ocrSkipped} more scanned page${ocrSkipped > 1 ? 's were' : ' was'} skipped: OCR reads the first ${MAX_OCR_PAGES}.`);
+  if (!text.trim()) throw new UnsupportedFileError("The spider couldn't find any text in this PDF, even with OCR.");
 
   return {
     name,
@@ -149,6 +164,21 @@ export async function parsePdf(data: ArrayBuffer, name: string, measure: Measure
     warnings,
     dispose: () => void task.destroy(),
   };
+}
+
+/** Reads a scanned page with OCR and returns its lines in the shape the text layer gives. */
+async function ocrPage(page: Page): Promise<RawLine[]> {
+  const { ocrCanvas, recognize } = await import('./ocr');
+  // Rasterize at about 2400 px wide, a resolution OCR reads well.
+  const source = await page.rasterize!(2400 / page.width);
+  const { canvas, ppu } = ocrCanvas(source);
+  const lines = await recognize(canvas, ppu);
+  return lines.map((l) => ({
+    words: l.words.map((w) => ({ ...w, start: 0, end: 0, glued: false, size: l.size })),
+    baseline: l.baseline,
+    size: l.size,
+    xEnd: Math.max(...l.words.map((w) => w.x + w.w)),
+  }));
 }
 
 /** Group runs into lines in content-stream order (which follows reading order, columns included). */

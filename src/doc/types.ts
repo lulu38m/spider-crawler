@@ -4,7 +4,7 @@
  * sentence finds its way back to pixels on a page.
  */
 
-export type DocKind = 'pdf' | 'docx' | 'markdown' | 'text' | 'code' | 'html';
+export type DocKind = 'pdf' | 'docx' | 'markdown' | 'text' | 'code' | 'html' | 'image';
 
 export interface Word {
   text: string;
